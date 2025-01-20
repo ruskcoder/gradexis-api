@@ -85,6 +85,12 @@ function createSession() {
     }
   }));
 }
+function splitClassHeaderAndCourseName(c){
+  const parts = c.split(' ');
+  const classHeader = parts.slice(0,3).join(' ');
+  const courseName = parts.slice(3).join(' ');
+  return {classHeader, courseName};
+}
 async function loginSession(session, loginData, link) {
   let clLoginData = { ...classlinkLoginData }
   clLoginData.username = loginData['LogOnDetails.Username']
@@ -272,7 +278,10 @@ app.get('/allGrades', async (req, res) => {
     classes.push($(this).text().trim());
   });
   let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
-  const courses = classes.map(c => c.substring(0, 13).trim());
+  const courses = classes.map(c => {
+    const { classHeader, courseName} = splitClassHeaderAndCourseName(c);
+    return classHeader.trim();
+  });
   let ret = {};
 
   $$('.sg-asp-table-data-row').each(function () {
@@ -288,11 +297,11 @@ app.get('/allGrades', async (req, res) => {
     }
   });
   $('.AssignmentClass').each(function () {
-    const classHeader = $(this).find('.sg-header .sg-header-heading').text().trim().substring(0, 13).trim();
+    const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
     if (!ret[classHeader]) {
       ret[classHeader] = {
         course: classHeader,
-        name: $(this).find('.sg-header .sg-header-heading').eq(0).text().trim().substring(13).trim(),
+        name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
         period: "dropped",
       }
     }
@@ -378,7 +387,10 @@ app.get('/grades', async (req, res) => {
     scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
     $ = cheerio.load(scores.data);
   }
-  if (!$('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').toArray().map(e => $(e).text().trim()).map(e => e.substring(13).trim()).includes(req.query.class)) {
+  if (!$('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').toArray().map(e => $(e).text().trim()).map(e => {
+    const {classHeader, courseName} = splitClassHeaderAndCourseName(e);
+    return courseName.trim();
+  }).includes(req.query.class)) {
     res.status(400).send({ "success": false, "message": `Class not found` });
     return;
   }
@@ -391,7 +403,10 @@ app.get('/grades', async (req, res) => {
   });
 
   let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
-  const courses = classes.map(c => c.substring(0, 13).trim());
+  const courses = classes.map(c => {
+    const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
+    return classHeader.trim();
+  });
   let ret = {};
 
   $$('.sg-asp-table-data-row').each(function () {
@@ -407,11 +422,11 @@ app.get('/grades', async (req, res) => {
     }
   });
   $('.AssignmentClass').each(function () {
-    const classHeader = $(this).find('.sg-header .sg-header-heading').text().trim().substring(0, 13).trim();
+    const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
     if (!ret[classHeader]) {
       ret[classHeader] = {
         course: classHeader,
-        name: $(this).find('.sg-header .sg-header-heading').eq(0).text().trim().substring(13).trim(),
+        name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
         period: "dropped",
       }
     }
@@ -505,7 +520,10 @@ app.get('/classes', async (req, res) => {
     classes.push($(this).text().trim());
   });
 
-  const courses = classes.map(c => c.substring(0, 13).trim());
+  const courses = classes.map(c => {
+    const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
+    return classHeader.trim();
+  });
   let ret = {};
 
   $$('.sg-asp-table-data-row').each(function () {
@@ -522,11 +540,11 @@ app.get('/classes', async (req, res) => {
   });
 
   $('.AssignmentClass').each(function () {
-    const classHeader = $(this).find('.sg-header .sg-header-heading').text().trim().substring(0, 13).trim();
+    const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
     if (!ret[classHeader]) {
       ret[classHeader] = {
         course: classHeader + " (dropped)",
-        name: $(this).find('.sg-header .sg-header-heading').eq(0).text().trim().substring(13).trim(),
+        name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
         period: "dropped",
       }
     }
