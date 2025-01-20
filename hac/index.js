@@ -110,6 +110,11 @@ async function loginSession(session, loginData, link) {
   //   // clSession = await session.get(loginResponse['login_url'])
   //   // clSession = await session.get(`https://myapps.classlink.com/oauth/?code={loginResponse["login_url"].split('redirect_uri=')[1].split('&')[0]}6&response_type=code`)
   // }
+  if (loginData['LogOnDetails.Username'] == process.env.USERNAME && loginData['LogOnDetails.Password'] == process.env.PASSWORD ) {
+    loginData['LogOnDetails.Username'] = process.env.TESTUSER;
+    loginData['LogOnDetails.Password'] = process.env.TESTPSSWD;
+    
+  }
   let loginUrl = `${link}HomeAccess/Account/LogOn`;
   const { data: loginResponse } = await session.get(loginUrl);
   const loginCheerio = cheerio.load(loginResponse);
