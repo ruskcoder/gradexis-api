@@ -110,9 +110,14 @@ async function loginSession(session, loginData, link) {
   //   // clSession = await session.get(loginResponse['login_url'])
   //   // clSession = await session.get(`https://myapps.classlink.com/oauth/?code={loginResponse["login_url"].split('redirect_uri=')[1].split('&')[0]}6&response_type=code`)
   // }
-  if (loginData['LogOnDetails.Username'] == process.env.USERNAME && loginData['LogOnDetails.Password'] == process.env.PASSWORD ) {
-    loginData['LogOnDetails.Username'] = process.env.TESTUSER;
-    loginData['LogOnDetails.Password'] = process.env.TESTPSSWD;
+  console.log(process.env.USERNAME);
+  console.log(process.env.PASSWORD);
+  console.log(process.env.TESTUSER);
+  console.log(process.env.TESTPSSWD);
+  
+  if (loginData['LogOnDetails.Username'] == process.env.TESTUSER && loginData['LogOnDetails.Password'] == process.env.TESTPSSWD ) {
+    loginData['LogOnDetails.Username'] = process.env.USERNAME;
+    loginData['LogOnDetails.Password'] = process.env.PASSWORD;
     
   }
   let loginUrl = `${link}HomeAccess/Account/LogOn`;
@@ -197,7 +202,6 @@ app.get('/info', async (req, res) => {
   else {
     session = await loginSession(session, userLoginData, link);
   }
-  console.log(typeof session)
 
   if (typeof session == "object") {
     res.status(session.status || 401).send({ "success": false, "message": session.message });
