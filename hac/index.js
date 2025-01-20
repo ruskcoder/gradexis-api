@@ -216,7 +216,9 @@ app.get('/info', async (req, res) => {
     ret["language"] = $("span#plnMain_lblLanguage").text().trim();
     ret["cohort-year"] = $("span#plnMain_lblCohortYear").text().trim();
   }
-
+  if (ret["name"] == process.env.MYNAME) {
+    ret["name"] = "Test User";
+  }
   const sessionData = session.defaults.jar.toJSON()
   res.send({
     ...ret,
