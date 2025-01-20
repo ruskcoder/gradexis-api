@@ -10,7 +10,7 @@ app.use('/hac', hac);
 
 const port = 3000; 
 app.listen(port, () => { 
-    console.log(`Main App lsitening on http://localhost:${port}`); 
+    console.log(`Main App listening on http://localhost:${port}`);
 });
 
 module.exports = app;
