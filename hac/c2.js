@@ -4,8 +4,8 @@ const axios = require('axios');
 const session = axios.create({ withCredentials: true });
 
 let classlinkLoginData = {
-  "username": "", // deleted password
-  "password": "",
+  "username": process.env["USERNAME"], // deleted password
+  "password": process.env["PASSWORD"],
   "os": "Windows",
   "userdn": "",
   "code": "katyisd",   // district name
@@ -19,13 +19,13 @@ async function login() {
         let csrftoken = clSession.data.split('"csrfToken":"')[1].split('"')[0];
         console.log(csrftoken);
 
-        clSession = await session.post("https://launchpad.classlink.com/login", {
-            headers: {
-                'cookie': clSession.headers['set-cookie'].join('; '),
-                'csrf-token': csrftoken,
-            },
-            data: classlinkLoginData
-        });
+        // clSession = await session.post("https://launchpad.classlink.com/login", {
+        //     headers: {
+        //         'cookie': clSession.headers['set-cookie'].join('; '),
+        //         'csrf-token': csrftoken,
+        //     },
+        //     data: classlinkLoginData
+        // });
 
         // let loginResponse = clSession.data;
         // if (loginResponse['ResultCode'] != 1) {
