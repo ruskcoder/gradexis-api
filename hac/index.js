@@ -693,8 +693,7 @@ app.get('/attendance', async (req, res) => {
 
 app.get('/teachers', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
-    if (!loginDetails)
-    {
+    if (!loginDetails) {
         console.log("Invalid login details");
         return;
     }
@@ -739,6 +738,208 @@ app.get('/teachers', async (req, res) => {
         session: sessionData,
     });
     return;
+});
+
+app.get('/ipr', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+
+    const {link, username, password} = loginDetails;
+
+    let userLoginData = {...loginData};
+    userLoginData['LogOnDetails.UserName'] = username;
+    userLoginData['LogOnDetails.Password'] = password;
+
+    let session = createSession();
+
+    if (req.query.session) {
+        const cookies = JSON.parse(req.query.session);
+        session.defaults.jar = CookieJar.fromJSON(cookies);
+    } else {
+        session = await loginSession(session, userLoginData, link);
+    }
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({"success": false, "message": session.message});
+        return;
+    }
+
+    const progressReportUrl = link + "HomeAccess/Content/Student/InterimProgress.aspx";
+    const { data: progressReportPage } = await session.get(progressReportUrl);
+    const $ = cheerio.load(progressReportPage);
+
+    const options = $('#plnMain_ddlIPRDates option').toArray().reverse();
+    const reports = [];
+
+    for (const option of options) {
+        const value = $(option).attr('value');
+        const selectedText = $(option).text().trim();
+
+        $('#plnMain_ddlIPRDates').val(value);
+
+        const viewstate = $('input[name="__VIEWSTATE"]').val();
+        const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
+        const data = {
+            __EVENTTARGET: 'ctl00$plnMain$ddlIPRDates',
+            __EVENTARGUMENT: '',
+            __VIEWSTATE: viewstate,
+            __EVENTVALIDATION: eventvalidation,
+            'ctl00$plnMain$ddlIPRDates': value,
+        };
+
+        const { data: updatedPage } = await session.post(progressReportUrl, data);
+        const $$ = cheerio.load(updatedPage);
+
+        let report = [];
+        $$('.sg-asp-table-data-row').each(function () {
+            let current = {};
+            current['course'] = $(this).children().eq(0).text().trim();
+            current['description'] = $(this).children().eq(1).text().trim();
+            current['period'] = $(this).children().eq(2).text().trim();
+            current['teacher'] = $(this).children().eq(3).text().trim();
+            current['room'] = $(this).children().eq(4).text().trim();
+            current['grade'] = $(this).children().eq(5).text().trim();
+            current['com1'] = $(this).children().eq(6).text().trim();
+            current['com2'] = $(this).children().eq(7).text().trim();
+            current['com3'] = $(this).children().eq(8).text().trim();
+            current['com4'] = $(this).children().eq(9).text().trim();
+            current['com5'] = $(this).children().eq(10).text().trim();
+            report.push(current);
+        });
+
+        const commentLegendTable = $$('.sg-asp-table[id*="CommentLegend"]');
+        let comments = [];
+
+        commentLegendTable.find('tr.sg-asp-table-data-row').each(function () {
+            let commentRow = {}
+            commentRow['comment'] = $(this).children().eq(0).text().trim();
+            commentRow['commentDescription'] = $(this).children().eq(1).text().trim();
+            comments.push(commentRow);
+        });
+        report.push({ comments: comments });
+
+        reports.push({ date: selectedText, report });
+    }
+
+    const sessionData = session.defaults.jar.toJSON();
+    res.send({
+        progressReports: reports,
+        session: sessionData,
+    });
+    return;
+});
+
+app.get('/reportCard', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+
+    const {link, username, password} = loginDetails;
+
+    let userLoginData = {...loginData};
+    userLoginData['LogOnDetails.UserName'] = username;
+    userLoginData['LogOnDetails.Password'] = password;
+
+    let session = createSession();
+
+    if (req.query.session) {
+        const cookies = JSON.parse(req.query.session);
+        session.defaults.jar = CookieJar.fromJSON(cookies);
+    } else {
+        session = await loginSession(session, userLoginData, link);
+    }
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({"success": false, "message": session.message});
+        return;
+    }
+
+    const reportCardUrl = link + "HomeAccess/Content/Student/ReportCards.aspx";
+    const { data: reportCardPage } = await session.get(reportCardUrl);
+    const $ = cheerio.load(reportCardPage);
+
+    const options = $('#plnMain_ddlRCRuns option').toArray().reverse();
+    const reports = [];
+
+    for (const option of options) {
+        const value = $(option).attr('value');
+        const selectedText = $(option).text().trim();
+
+        $('#plnMain_ddlRCRuns').val(value);
+
+        const viewstate = $('input[name="__VIEWSTATE"]').val();
+        const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
+        const data = {
+            __EVENTTARGET: 'ctl00$plnMain$ddlRCRuns',
+            __EVENTARGUMENT: '',
+            __VIEWSTATE: viewstate,
+            __EVENTVALIDATION: eventvalidation,
+            'ctl00$plnMain$ddlRCRuns': value,
+        };
+
+        const { data: updatedPage } = await session.post(reportCardUrl, data);
+        const $$ = cheerio.load(updatedPage);
+
+        let report = [];
+        $$('.sg-asp-table-data-row').each(function () {
+            let current = {};
+            current['course'] = $(this).children().eq(0).text().trim();
+            current['description'] = $(this).children().eq(1).text().trim();
+            current['period'] = $(this).children().eq(2).text().trim();
+            current['teacher'] = $(this).children().eq(3).text().trim();
+            current['room'] = $(this).children().eq(4).text().trim();
+            current['att_credit'] = $(this).children().eq(5).text().trim();
+            current['ern_credit'] = $(this).children().eq(6).text().trim();
+            current['first'] = $(this).children().eq(7).text().trim();
+            current['second'] = $(this).children().eq(8).text().trim();
+            current['third'] = $(this).children().eq(9).text().trim();
+            current["exam1"] = $(this).children().eq(10).text().trim();
+            current["sem1"] = $(this).children().eq(11).text().trim();
+            current["fourth"] = $(this).children().eq(12).text().trim();
+            current["fifth"] = $(this).children().eq(13).text().trim();
+            current["sixth"] = $(this).children().eq(14).text().trim();
+            current["exam2"] = $(this).children().eq(15).text().trim();
+            current["sem2"] = $(this).children().eq(16).text().trim();
+            current["eoy"] = $(this).children().eq(17).text().trim();
+            current["cnd1"] = $(this).children().eq(18).text().trim();
+            current["cnd2"] = $(this).children().eq(19).text().trim();
+            current["cnd3"] = $(this).children().eq(20).text().trim();
+            current["cnd4"] = $(this).children().eq(21).text().trim();
+            current["cnd5"] = $(this).children().eq(22).text().trim();
+            current["cnd6"] = $(this).children().eq(23).text().trim();
+            current["c1"] = $(this).children().eq(24).text().trim();
+            current["c2"] = $(this).children().eq(25).text().trim();
+            current["c3"] = $(this).children().eq(26).text().trim();
+            current["c4"] = $(this).children().eq(27).text().trim();
+            current["c5"] = $(this).children().eq(28).text().trim();
+            current["exda"] = $(this).children().eq(29).text().trim();
+            current["uexa"] = $(this).children().eq(30).text().trim();
+            current["exdt"] = $(this).children().eq(31).text().trim();
+            current["uext"] = $(this).children().eq(32).text().trim();
+            report.push(current);
+        });
+        // Find the first span element with the id containing TotalEarnedCredit and push it to report
+        const totalEarnedCredit = $("[id='plnMain_lblTotalEarnedCredit']").text().trim();
+        report.push({ totalEarnedCredit: totalEarnedCredit });
+
+        const commentLegendTable = $$('.sg-asp-table[id="plnMain_dgCommentLegend"]');
+        let comments = [];
+
+        commentLegendTable.find('tr:not(.sg-asp-table-header-row)').each(function () {
+            let commentRow = {};
+            commentRow['comment'] = $(this).children().eq(0).text().trim();
+            commentRow['commentDescription'] = $(this).children().eq(1).text().trim();
+            comments.push(commentRow);
+        });
+        report.push({ comments: comments });
+
+        reports.push({ reportCardRun: selectedText, report });
+    }
+
+    const sessionData = session.defaults.jar.toJSON();
+    res.send({
+        reportCards: reports,
+        session: sessionData,
+    });
+    return;
+
 });
 
 app.listen(port, () => {
