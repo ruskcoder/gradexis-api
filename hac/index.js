@@ -693,11 +693,6 @@ app.get('/attendance', async (req, res) => {
 
 app.get('/teachers', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
-    if (!loginDetails) {
-        console.log("Invalid login details");
-        return;
-    }
-
     const {link, username, password} = loginDetails;
 
     let userLoginData = {...loginData};
