@@ -785,7 +785,7 @@ app.get('/ipr', async (req, res) => {
         const $$ = cheerio.load(updatedPage);
 
         let report = [];
-        $$('.sg-asp-table-data-row').each(function () {
+        $$('#plnMain_dgIPR .sg-asp-table-data-row').each(function () {
             let current = {};
             current['course'] = $(this).children().eq(0).text().trim();
             current['description'] = $(this).children().eq(1).text().trim();
