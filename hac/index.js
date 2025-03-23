@@ -119,7 +119,7 @@ async function loginSession(session, loginData, link) {
     //   // clSession = await session.get(`https://myapps.classlink.com/oauth/?code={loginResponse["login_url"].split('redirect_uri=')[1].split('&')[0]}6&response_type=code`)
     // }
 
-    if (loginData['LogOnDetails.UserName'] == process.env.TESTUSER && loginData['LogOnDetails.Password'] == process.env.TESTPSSWD) {
+    if (loginData['LogOnDetails.UserName'] === process.env.TESTUSER && loginData['LogOnDetails.Password'] === process.env.TESTPSSWD) {
         loginData['LogOnDetails.UserName'] = process.env.USERNAME;
         loginData['LogOnDetails.Password'] = process.env.PASSWORD;
     }
@@ -183,7 +183,6 @@ app.get('/login', async (req, res) => {
     res.send({
         session: sessionData
     });
-    return;
 })
 
 app.get('/info', async (req, res) => {
@@ -225,7 +224,7 @@ app.get('/info', async (req, res) => {
         ret["language"] = $("span#plnMain_lblLanguage").text().trim();
         ret["cohort-year"] = $("span#plnMain_lblCohortYear").text().trim();
     }
-    if (ret["name"] == process.env.MYNAME) {
+    if (ret["name"] === process.env.MYNAME) {
         ret["name"] = "Test User";
     }
     const sessionData = session.defaults.jar.toJSON()
@@ -933,8 +932,106 @@ app.get('/reportCard', async (req, res) => {
         reportCards: reports,
         session: sessionData,
     });
-    return;
 
+});
+
+app.get('/transcript', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+
+    const { link, username, password } = loginDetails;
+
+    let userLoginData = { ...loginData };
+    userLoginData['LogOnDetails.UserName'] = username;
+    userLoginData['LogOnDetails.Password'] = password;
+
+    let session = createSession();
+
+    if (req.query.session) {
+        const cookies = JSON.parse(req.query.session);
+        session.defaults.jar = CookieJar.fromJSON(cookies);
+    } else {
+        session = await loginSession(session, userLoginData, link);
+    }
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
+        return;
+    }
+
+    const transcriptUrl = link + "HomeAccess/Content/Student/Transcript.aspx";
+    const { data: transcriptPage } = await session.get(transcriptUrl);
+    const $ = cheerio.load(transcriptPage);
+
+    const transcript = {};
+
+    $('td.sg-transcript-group').each((index, element) => {
+        const semester = {};
+
+        // First table
+        $(element).find('table > tbody > tr > td > span').each((i, el) => {
+            const id = $(el).attr('id');
+            if (id.includes('YearValue')) {
+                semester['year'] = $(el).text().trim();
+            } else if (id.includes('GroupValue')) {
+                semester['semester'] = $(el).text().trim();
+            } else if (id.includes('GradeValue')) {
+                semester['grade'] = $(el).text().trim();
+            } else if (id.includes('BuildingValue')) {
+                semester['school'] = $(el).text().trim();
+            }
+        });
+
+        const finalData = [];
+
+        // Second table
+        $(element).find('table:nth-child(2) > tbody > tr').each((i, el) => {
+            if ($(el).hasClass('sg-asp-table-header-row') || $(el).hasClass('sg-asp-table-data-row')) {
+                const data = [];
+                $(el).find('td').each((j, el2) => {
+                    data.push($(el2).text().trim());
+                });
+                finalData.push(data);
+            }
+        });
+        semester['data'] = finalData;
+
+        // Third table
+        $(element).find('table:nth-child(3) > tbody > tr > td > label').each((i, el) => {
+            if ($(el).attr('id').includes('CreditValue')) {
+                semester['credits'] = $(el).text().trim();
+            }
+        });
+
+        const title = `${semester['year']} - Semester ${semester['semester']}`;
+        transcript[title] = semester;
+    });
+
+    $('#plnMain_rpTranscriptGroup_tblCumGPAInfo tbody > tr.sg-asp-table-data-row').each((index, element) => {
+        let text = '';
+        let value = '';
+        $(element).find('td > span').each((i, el) => {
+            const id = $(el).attr('id');
+            if (id.includes('GPADescr')) {
+                text = $(el).text().trim();
+            }
+            if (id.includes('GPACum')) {
+                value = $(el).text().trim();
+            }
+            if (id.includes('GPARank')) {
+                transcript['rank'] = $(el).text().trim();
+            }
+            if (id.includes('GPAQuartile')) {
+                transcript['quartile'] = $(el).text().trim();
+            }
+        });
+        transcript[text] = value;
+    });
+
+    const sessionData = session.defaults.jar.toJSON();
+    res.send({
+        transcript: transcript,
+        session: sessionData,
+    });
 });
 
 app.listen(port, () => {
