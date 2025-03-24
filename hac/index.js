@@ -119,7 +119,7 @@ async function loginSession(session, loginData, link) {
     //   // clSession = await session.get(`https://myapps.classlink.com/oauth/?code={loginResponse["login_url"].split('redirect_uri=')[1].split('&')[0]}6&response_type=code`)
     // }
 
-    if (loginData['LogOnDetails.UserName'] === process.env.TESTUSER && loginData['LogOnDetails.Password'] === process.env.TESTPSSWD) {
+    if (loginData['LogOnDetails.UserName'] == process.env.TESTUSER && loginData['LogOnDetails.Password'] == process.env.TESTPSSWD) {
         loginData['LogOnDetails.UserName'] = process.env.USERNAME;
         loginData['LogOnDetails.Password'] = process.env.PASSWORD;
     }
@@ -224,7 +224,7 @@ app.get('/info', async (req, res) => {
         ret["language"] = $("span#plnMain_lblLanguage").text().trim();
         ret["cohort-year"] = $("span#plnMain_lblCohortYear").text().trim();
     }
-    if (ret["name"] === process.env.MYNAME) {
+    if (ret["name"] == process.env.MYNAME) {
         ret["name"] = "Test User";
     }
     const sessionData = session.defaults.jar.toJSON()
