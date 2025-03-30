@@ -235,7 +235,7 @@ app.get('/info', async (req, res) => {
     return;
 });
 
-app.get('/allGrades', async (req, res) => {
+app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
@@ -284,6 +284,7 @@ app.get('/allGrades', async (req, res) => {
         classes.push($(this).text().trim());
     });
     let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
+    let termList = $('#plnMain_ddlReportCardRuns').find('option').toArray().map(e => $(e).text().trim()).slice(1);
     const courses = classes.map(c => {
         const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
         return classHeader.trim();
@@ -312,7 +313,7 @@ app.get('/allGrades', async (req, res) => {
             }
         }
         ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
-        ret[classHeader].assignments = [];
+        ret[classHeader].scores = [];
 
         $(this).find('.sg-content-grid .sg-asp-table tbody .sg-asp-table-data-row').each(function () {
             const assignment = {
@@ -327,7 +328,7 @@ app.get('/allGrades', async (req, res) => {
                 weightedTotalPoints: $(this).children().eq(8).text().trim(),
                 percentage: $(this).children().eq(9).text().trim()
             };
-            ret[classHeader].assignments.push(assignment);
+            ret[classHeader].scores.push(assignment);
         });
         ret[classHeader].categories = {};
         $(this).find('.sg-content-grid .sg-asp-table-group tr.sg-asp-table-data-row').each(function () {
@@ -344,11 +345,17 @@ app.get('/allGrades', async (req, res) => {
     ret = Object.values(ret);
     const sessionData = session.defaults.jar.toJSON()
     res.send({
+        scoresIncluded: true,
+        termList: termList,
         term: term,
-        grades: ret,
+        classes: ret,
         session: sessionData,
     });
     return;
+});
+
+app.get('/scores', (req, res) => {
+    res.redirect(307, '/allGrades');
 });
 
 app.get('/grades', async (req, res) => {
@@ -478,99 +485,99 @@ app.get('/grades', async (req, res) => {
     });
 });
 
-app.get('/classes', async (req, res) => {
-    const loginDetails = verifyLogin(req, res);
-    if (!loginDetails) return;
+// app.get('/classes', async (req, res) => {
+//     const loginDetails = verifyLogin(req, res);
+//     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+//     const {link, username, password} = loginDetails;
 
-    let userLoginData = {...loginData};
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
+//     let userLoginData = {...loginData};
+//     userLoginData['LogOnDetails.UserName'] = username;
+//     userLoginData['LogOnDetails.Password'] = password;
 
-    let session = createSession();
+//     let session = createSession();
 
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
-    if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
-        return
-    }
+//     if (req.query.session) {
+//         const cookies = JSON.parse(req.query.session);
+//         session.defaults.jar = CookieJar.fromJSON(cookies);
+//     } else {
+//         session = await loginSession(session, userLoginData, link);
+//     }
+//     if (typeof session == "object") {
+//         res.status(session.status || 401).send({"success": false, "message": session.message});
+//         return
+//     }
 
-    const averages = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
-    if (averages.data.includes("Welcome to")) {
-        res.status(401).send({"success": false, "message": "Invalid Session"});
-        return;
-    }
+//     const averages = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
+//     if (averages.data.includes("Welcome to")) {
+//         res.status(401).send({"success": false, "message": "Invalid Session"});
+//         return;
+//     }
 
-    const listOfClasses = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
+//     const listOfClasses = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
 
-    var $ = cheerio.load(averages.data);
-    if (req.query.term) {
-        let newTerm = {...termData};
-        var viewstate = $('input[name="__VIEWSTATE"]').val();
-        var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
-        var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
-        newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
-        newTerm["__VIEWSTATE"] = viewstate;
-        newTerm["__EVENTVALIDATION"] = eventvalidation;
-        scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
-        $ = cheerio.load(scores.data);
-    }
-    const $$ = cheerio.load(listOfClasses.data);
-    let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
-    let termList = $('#plnMain_ddlReportCardRuns').find('option').toArray().map(e => $(e).text().trim()).slice(1);
-    // little bit redundant but required to keep classes in period order
-    const classes = [];
-    $('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').each(function () {
-        classes.push($(this).text().trim());
-    });
+//     var $ = cheerio.load(averages.data);
+//     if (req.query.term) {
+//         let newTerm = {...termData};
+//         var viewstate = $('input[name="__VIEWSTATE"]').val();
+//         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
+//         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
+//         newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
+//         newTerm["__VIEWSTATE"] = viewstate;
+//         newTerm["__EVENTVALIDATION"] = eventvalidation;
+//         scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
+//         $ = cheerio.load(scores.data);
+//     }
+//     const $$ = cheerio.load(listOfClasses.data);
+//     let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
+//     let termList = $('#plnMain_ddlReportCardRuns').find('option').toArray().map(e => $(e).text().trim()).slice(1);
+//     // little bit redundant but required to keep classes in period order
+//     const classes = [];
+//     $('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').each(function () {
+//         classes.push($(this).text().trim());
+//     });
 
-    const courses = classes.map(c => {
-        const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
-        return classHeader.trim();
-    });
-    let ret = {};
+//     const courses = classes.map(c => {
+//         const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
+//         return classHeader.trim();
+//     });
+//     let ret = {};
 
-    $$('.sg-asp-table-data-row').each(function () {
-        const courseText = $(this).children().first().text().trim();
-        if (courses.includes(courseText)) {
-            ret[courseText] = {
-                course: courseText,
-                name: $(this).children().eq(1).find('a').text().trim(),
-                period: $(this).children().eq(2).text().trim().substring(0, 1),
-                teacher: $(this).children().eq(3).text().trim(),
-                room: $(this).children().eq(4).text().trim(),
-            };
-        }
-    });
+//     $$('.sg-asp-table-data-row').each(function () {
+//         const courseText = $(this).children().first().text().trim();
+//         if (courses.includes(courseText)) {
+//             ret[courseText] = {
+//                 course: courseText,
+//                 name: $(this).children().eq(1).find('a').text().trim(),
+//                 period: $(this).children().eq(2).text().trim().substring(0, 1),
+//                 teacher: $(this).children().eq(3).text().trim(),
+//                 room: $(this).children().eq(4).text().trim(),
+//             };
+//         }
+//     });
 
-    $('.AssignmentClass').each(function () {
-        const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
-        if (!ret[classHeader]) {
-            ret[classHeader] = {
-                course: classHeader + " (dropped)",
-                name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
-                period: "dropped",
-            }
-        }
-        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
-    });
+//     $('.AssignmentClass').each(function () {
+//         const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
+//         if (!ret[classHeader]) {
+//             ret[classHeader] = {
+//                 course: classHeader + " (dropped)",
+//                 name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
+//                 period: "dropped",
+//             }
+//         }
+//         ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
+//     });
 
-    ret = Object.values(ret);
-    const sessionData = session.defaults.jar.toJSON()
-    res.send({
-        termList: termList,
-        term: term,
-        classes: ret,
-        session: sessionData,
-    });
-    return;
-});
+//     ret = Object.values(ret);
+//     const sessionData = session.defaults.jar.toJSON()
+//     res.send({
+//         termList: termList,
+//         term: term,
+//         classes: ret,
+//         session: sessionData,
+//     });
+//     return;
+// });
 
 app.get('/schedule', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
