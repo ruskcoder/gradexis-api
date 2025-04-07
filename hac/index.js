@@ -315,7 +315,7 @@ app.get('/classes', async (req, res) => {
         ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
         ret[classHeader].scores = [];
 
-        $(this).find('.sg-content-grid .sg-asp-table tbody .sg-asp-table-data-row').each(function () {
+        $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
             const assignment = {
                 dateDue: $(this).children().eq(0).text().trim(),
                 dateAssigned: $(this).children().eq(1).text().trim(),
