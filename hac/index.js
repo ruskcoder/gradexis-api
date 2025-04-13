@@ -2,12 +2,27 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const {wrapper} = require('axios-cookiejar-support');
-const {CookieJar} = require('tough-cookie');
+const { wrapper } = require('axios-cookiejar-support');
+const { CookieJar } = require('tough-cookie');
 
 const app = express();
 const port = 4000;
 
+monthInputs = {
+    'january': 0, 'jan': 0, '01': 0, 1: 0,
+    'february': 1, 'feb': 1, '02': 1, 2: 1,
+    'march': 2, 'mar': 2, '03': 2, 3: 2,
+    'april': 3, 'apr': 3, '04': 3, 4: 3,
+    'may': 4, '05': 4, 5: 4,
+    'june': 5, 'jun': 5, '06': 5, 6: 5,
+    'july': 6, 'jul': 6, '07': 6, 7: 6,
+    'august': 7, 'aug': 7, '08': 7, 8: 7,
+    'september': 8, 'sept': 8, 'sep': 8, '09': 8, 9: 8,
+    'october': 9, 'oct': 9, 10: 9,
+    'november': 10, 'nov': 10, 11: 10,
+    'december': 11, 'dec': 11, 12: 11,
+}
+monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 loginData = {
     "__RequestVerificationToken": "",
     "SCKTY00328510CustomEnabled": true,
@@ -90,11 +105,11 @@ function splitClassHeaderAndCourseName(c) {
     const parts = c.split(' ');
     const classHeader = parts.slice(0, 3).join(' ');
     const courseName = parts.slice(3).join(' ');
-    return {classHeader, courseName};
+    return { classHeader, courseName };
 }
 
 async function loginSession(session, loginData, link) {
-    let clLoginData = {...classlinkLoginData}
+    let clLoginData = { ...classlinkLoginData }
     clLoginData.username = loginData['LogOnDetails.Username']
     clLoginData.username = loginData['LogOnDetails.Password']
     clLoginData.code = "katyisd"
@@ -125,17 +140,17 @@ async function loginSession(session, loginData, link) {
     }
 
     let loginUrl = `${link}HomeAccess/Account/LogOn`;
-    const {data: loginResponse} = await session.get(loginUrl);
+    const { data: loginResponse } = await session.get(loginUrl);
     const loginCheerio = cheerio.load(loginResponse);
     loginData["__RequestVerificationToken"] = loginCheerio("input[name='__RequestVerificationToken']").val();
     try {
         const data = await session.post(loginUrl, loginData);
         if (data.data.includes("incorrect") || data.data.includes("invalid")) {
-            return {status: 401, message: "Incorrect username or password"};
+            return { status: 401, message: "Incorrect username or password" };
         }
         return session;
     } catch (e) {
-        return {status: 500, message: "HAC is broken again"};
+        return { status: 500, message: "HAC is broken again" };
     }
 }
 
@@ -151,10 +166,10 @@ function formatLink(link) {
 
 function verifyLogin(req, res) {
     if (!req.query.link || !req.query.username || !req.query.password) {
-        res.status(400).send({"success": false, "message": `Missing required parameters (link, username, password)`});
+        res.status(400).send({ "success": false, "message": `Missing required parameters (link, username, password)` });
         return false;
     } else {
-        return {link: formatLink(req.query.link), username: req.query.username, password: req.query.password};
+        return { link: formatLink(req.query.link), username: req.query.username, password: req.query.password };
     }
 }
 
@@ -166,9 +181,9 @@ app.get('/login', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -176,7 +191,7 @@ app.get('/login', async (req, res) => {
 
     session = await loginSession(session, userLoginData, link);
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
     const sessionData = session.defaults.jar.toJSON();
@@ -189,9 +204,9 @@ app.get('/info', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -205,12 +220,12 @@ app.get('/info', async (req, res) => {
     }
 
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
     const registration = await session.get(link + "HomeAccess/Content/Student/Registration.aspx");
     if (registration.data.includes("Welcome to")) {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
     const $ = cheerio.load(registration.data);
@@ -239,9 +254,9 @@ app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -254,19 +269,19 @@ app.get('/classes', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
 
     var scores = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
     if (scores.data.includes("Welcome to")) {
-        res.status(401).send({"success": false, "message": "Invalid Session"});
+        res.status(401).send({ "success": false, "message": "Invalid Session" });
         return;
     }
 
     var $ = cheerio.load(scores.data);
     if (req.query.term) {
-        let newTerm = {...termData};
+        let newTerm = { ...termData };
         var viewstate = $('input[name="__VIEWSTATE"]').val();
         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
@@ -286,7 +301,7 @@ app.get('/classes', async (req, res) => {
     let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
     let termList = $('#plnMain_ddlReportCardRuns').find('option').toArray().map(e => $(e).text().trim()).slice(1);
     const courses = classes.map(c => {
-        const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
+        const { classHeader, courseName } = splitClassHeaderAndCourseName(c);
         return classHeader.trim();
     });
     let ret = {};
@@ -362,12 +377,12 @@ app.get('/grades', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
     if (!req.query.class) {
-        res.status(400).send({"success": false, "message": `Missing required parameters (class)`});
+        res.status(400).send({ "success": false, "message": `Missing required parameters (class)` });
         return;
     }
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -380,19 +395,19 @@ app.get('/grades', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(401).send({"success": false, "message": "Invalid session"});
+        res.status(401).send({ "success": false, "message": "Invalid session" });
         return
     }
 
     var scores = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
     if (scores.data.includes("Welcome to")) {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
 
     var $ = cheerio.load(scores.data);
     if (req.query.term) {
-        let newTerm = {...termData};
+        let newTerm = { ...termData };
         var viewstate = $('input[name="__VIEWSTATE"]').val();
         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
@@ -403,10 +418,10 @@ app.get('/grades', async (req, res) => {
         $ = cheerio.load(scores.data);
     }
     if (!$('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').toArray().map(e => $(e).text().trim()).map(e => {
-        const {classHeader, courseName} = splitClassHeaderAndCourseName(e);
+        const { classHeader, courseName } = splitClassHeaderAndCourseName(e);
         return courseName.trim();
     }).includes(req.query.class)) {
-        res.status(400).send({"success": false, "message": `Class not found`});
+        res.status(400).send({ "success": false, "message": `Class not found` });
         return;
     }
     const schedule = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
@@ -419,7 +434,7 @@ app.get('/grades', async (req, res) => {
 
     let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
     const courses = classes.map(c => {
-        const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
+        const { classHeader, courseName } = splitClassHeaderAndCourseName(c);
         return classHeader.trim();
     });
     let ret = {};
@@ -583,9 +598,9 @@ app.get('/schedule', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -598,12 +613,12 @@ app.get('/schedule', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
     const registration = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
     if (registration.data.includes("Welcome to")) {
-        res.status(401).send({"success": false, "message": "Invalid Session"});
+        res.status(401).send({ "success": false, "message": "Invalid Session" });
         return;
     }
     const $ = cheerio.load(registration.data);
@@ -631,9 +646,9 @@ app.get('/attendance', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -646,16 +661,77 @@ app.get('/attendance', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
+    }
+
+    if (req.query.date) {
+        var reqMonth = req.query.date.split('-')[0];
+        var reqYear = req.query.date.split('-')[1];
+        var monthIndex = monthInputs[reqMonth.toLowerCase()];
+        if (monthIndex === -1) {
+            res.status(400).send({ "success": false, "message": "Invalid month name" });
+            return;
+        }
     }
 
     const attendance = await session.get(link + "HomeAccess/Content/Attendance/MonthlyView.aspx");
     if (attendance.data.includes("Welcome to")) {
-        res.status(401).send({"success": false, "message": "Invalid Session"});
+        res.status(401).send({ "success": false, "message": "Invalid Session" });
         return;
     }
-    const $ = cheerio.load(attendance.data);
+    var $ = cheerio.load(attendance.data);
+
+    const jan1 = new Date(2000, 0, 1);
+    const targetDate = new Date(reqYear, monthIndex, 1);
+    const monthCode = Math.floor((targetDate - jan1) / 86400000);
+
+    if (req.query.date) {
+        // eslint-disable-next-line no-constant-condition
+        let maxloops = 15;
+        let loops = 0;
+        while (loops < maxloops) {
+            loops++;
+            let newMonth = { ...monthData };
+            newMonth["__VIEWSTATE"] = $('input[name="__VIEWSTATE"]').val();
+            newMonth["__EVENTVALIDATION"] = $('input[name="__EVENTVALIDATION"]').val();
+
+            let prevelem = $('a[title="Go to the previous month"]')
+            let prev;
+            let nextelem = $('a[title="Go to the next month"]');
+            let next;
+
+            if (!prevelem.text() || !nextelem.text()) {
+                const sessionData = session.defaults.jar.toJSON()
+                res.send({
+                    month: monthNames[monthIndex],
+                    year: reqYear,
+                    events: {},
+                    session: sessionData,
+                });
+                return;
+            }
+            else {
+                prev = parseInt(prevelem.attr('href').split('\'')[3].slice(1));
+                next = parseInt(nextelem.attr('href').split('\'')[3].slice(1));
+            }
+
+            if (monthCode <= prev) {
+                newMonth['__EVENTARGUMENT'] = `V${prev}`
+                const attendance = await session.post(link + "HomeAccess/Content/Attendance/MonthlyView.aspx", newMonth);
+                $ = cheerio.load(attendance.data);
+            }
+            else if (monthCode >= next) {
+                newMonth['__EVENTARGUMENT'] = `V${next}`
+                const attendance = await session.post(link + "HomeAccess/Content/Attendance/MonthlyView.aspx", newMonth);
+                $ = cheerio.load(attendance.data);
+            }
+            else {
+                break;
+            }
+        }
+    }
+
     let events = {};
     let key = {};
     let mo = $('#plnMain_cldAttendance > tbody > tr:nth-child(1) > td > table > tbody > tr > td:nth-child(2)').text().trim();
@@ -677,18 +753,16 @@ app.get('/attendance', async (req, res) => {
             } else {
                 if ($(this).attr('style')) {
                     let color = $(this).attr('style').substring(17).split(';')[0].toLowerCase();
-                    events[formattedDate] = {event: key[color], color: color};
+                    events[formattedDate] = { event: key[color], color: color };
                 }
             }
         }
     });
-    let prev = $('a[title="Go to the previous month"]').attr('href').split('\'')[3];
-    let next = $('a[title="Go to the next month"]').attr('href').split('\'')[3];
 
     const sessionData = session.defaults.jar.toJSON()
     res.send({
-        prev: prev,
-        next: next,
+        // prev: prev,
+        // next: next,
         month: mo.split(' ')[0],
         year: mo.split(' ')[1],
         events: events,
@@ -699,9 +773,9 @@ app.get('/attendance', async (req, res) => {
 
 app.get('/teachers', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -714,13 +788,13 @@ app.get('/teachers', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         console.log(session.message);
         return
     }
     const registration = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
     if (registration.data.includes("Welcome to")) {
-        res.status(401).send({"success": false, "message": "Invalid Session"});
+        res.status(401).send({ "success": false, "message": "Invalid Session" });
         return;
     }
     const $ = cheerio.load(registration.data);
@@ -745,9 +819,9 @@ app.get('/ipr', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -760,7 +834,7 @@ app.get('/ipr', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
 
@@ -833,9 +907,9 @@ app.get('/reportCard', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const {link, username, password} = loginDetails;
+    const { link, username, password } = loginDetails;
 
-    let userLoginData = {...loginData};
+    let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -848,7 +922,7 @@ app.get('/reportCard', async (req, res) => {
         session = await loginSession(session, userLoginData, link);
     }
     if (typeof session == "object") {
-        res.status(session.status || 401).send({"success": false, "message": session.message});
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
 
