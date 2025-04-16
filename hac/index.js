@@ -331,18 +331,25 @@ app.get('/classes', async (req, res) => {
         ret[classHeader].scores = [];
 
         $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
-            const assignment = {
+            let assignment = {
                 dateDue: $(this).children().eq(0).text().trim(),
                 dateAssigned: $(this).children().eq(1).text().trim(),
-                assignment: $(this).children().eq(2).children().first().text().trim(),
+                name: $(this).children().eq(2).children().first().text().trim(),
                 category: $(this).children().eq(3).text().trim(),
                 score: $(this).children().eq(4).text().trim(),
                 totalPoints: $(this).children().eq(5).text().trim(),
                 weight: $(this).children().eq(6).text().trim(),
                 weightedScore: $(this).children().eq(7).text().trim(),
                 weightedTotalPoints: $(this).children().eq(8).text().trim(),
-                percentage: $(this).children().eq(9).text().trim()
+                percentage: $(this).children().eq(9).text().trim(),
+                badges: []
             };
+            if (assignment.score.includes('Missing')) {
+                assignment.badges.push("missing");
+            }
+            if (assignment.score.includes('Exempt')) { 
+                assignment.badges.push("exempt");
+            }
             ret[classHeader].scores.push(assignment);
         });
         ret[classHeader].categories = {};
@@ -367,10 +374,6 @@ app.get('/classes', async (req, res) => {
         session: sessionData,
     });
     return;
-});
-
-app.get('/scores', (req, res) => {
-    res.redirect(307, '/allGrades');
 });
 
 app.get('/grades', async (req, res) => {
@@ -467,15 +470,22 @@ app.get('/grades', async (req, res) => {
             const assignment = {
                 dateDue: $(this).children().eq(0).text().trim(),
                 dateAssigned: $(this).children().eq(1).text().trim(),
-                assignment: $(this).children().eq(2).children().first().text().trim(),
+                name: $(this).children().eq(2).children().first().text().trim(),
                 category: $(this).children().eq(3).text().trim(),
                 score: $(this).children().eq(4).text().trim(),
                 totalPoints: $(this).children().eq(5).text().trim(),
                 weight: $(this).children().eq(6).text().trim(),
                 weightedScore: $(this).children().eq(7).text().trim(),
                 weightedTotalPoints: $(this).children().eq(8).text().trim(),
-                percentage: $(this).children().eq(9).text().trim()
+                percentage: $(this).children().eq(9).text().trim(),
+                badges: []
             };
+            if (assignment.score.includes('Missing')) {
+                assignment.badges.push("missing");
+            }
+            if (assignment.score.includes('Exempt')) { 
+                assignment.badges.push("exempt");
+            }
             ret[classHeader].assignments.push(assignment);
         });
         ret[classHeader].categories = {};
