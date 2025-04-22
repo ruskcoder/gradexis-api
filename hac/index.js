@@ -4,6 +4,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
+const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent/http');
 
 const app = express();
 const port = 4000;
@@ -35,14 +36,14 @@ loginData = {
     "LogOnDetails.Password": "",
 }
 classlinkLoginData = {
-    "username": "",
-    "password": "",
-    "os": "Windows",
-    "userdn": "",
-    "code": "",   // district name
-    "Browser": "Chrome",
-    "Resolution": "1920x1080"
-}
+    username: '',
+    password: '',
+    os: 'Windows',
+    userdn: '',
+    code: 'katyisd',
+    Browser: 'Chrome',
+    Resolution: '1920x1080'
+};
 termData = {
     "__EVENTTARGET": "ctl00$plnMain$btnRefreshView",
     "__EVENTARGUMENT": "",
@@ -77,8 +78,6 @@ monthHeaders = {
     "Cache-Control": "max-age=0",
     "Connection": "keep-alive",
     "Content-Type": "application/x-www-form-urlencoded",
-    "Origin": "https://homeaccess.katyisd.org",
-    "Referer": "https://homeaccess.katyisd.org/HomeAccess/Content/Attendance/MonthlyView.aspx",
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "same-origin",
@@ -92,13 +91,14 @@ monthHeaders = {
 
 function createSession() {
     const jar = new CookieJar();
-    return wrapper(axios.create({
+    let session = wrapper(axios.create({
         withCredentials: true,
         jar,
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     }));
+    return session;
 }
 
 function splitClassHeaderAndCourseName(c) {
@@ -108,50 +108,61 @@ function splitClassHeaderAndCourseName(c) {
     return { classHeader, courseName };
 }
 
-async function loginSession(session, loginData, link) {
-    let clLoginData = { ...classlinkLoginData }
-    clLoginData.username = loginData['LogOnDetails.Username']
-    clLoginData.username = loginData['LogOnDetails.Password']
-    clLoginData.code = "katyisd"
-    // WIP
+async function loginSession(session, loginData, link, clDistrict = "") {
+    if (clDistrict) {
+        let clLoginData = { ...classlinkLoginData };
+        clLoginData.username = loginData['LogOnDetails.UserName'];
+        clLoginData.password = loginData['LogOnDetails.Password'];
+        clLoginData.code = clDistrict;
 
-    // if (link.includes("katyisd")) {
-    //   let clSession = await session.get('https://launchpad.classlink.com/katyisd')
-    //   csrftoken = clSession.data.split('"csrfToken":"')[1].split('"')[0]
-    //   clSession = await session.post("https://launchpad.classlink.com/login", {
-    //     headers: {
-    //     'cookie': clSession.headers['set-cookie'][0],
-    //     'csrf-token': csrftoken
-    //     },
-    //     data: classlinkLoginData,
-    //     cookies: clSession.headers['set-cookie']
-    //   });
-    //   // let loginResponse = clSession.json()
-    //   // if (loginResponse['ResultCode'] != 1) {
-    //   //   return { status: 401, message: loginResponse['ResultDescription'] };
-    //   // }
-    //   // clSession = await session.get(loginResponse['login_url'])
-    //   // clSession = await session.get(`https://myapps.classlink.com/oauth/?code={loginResponse["login_url"].split('redirect_uri=')[1].split('&')[0]}6&response_type=code`)
-    // }
+        let clSession = await session.get('https://launchpad.classlink.com/katyisd');
+        let csrftoken = clSession.data.split('"csrfToken":"')[1].split('"')[0];
+        let cookies = clSession.headers['set-cookie'].join('; ');
 
-    if (loginData['LogOnDetails.UserName'] == process.env.TESTUSER && loginData['LogOnDetails.Password'] == process.env.TESTPSSWD) {
-        loginData['LogOnDetails.UserName'] = process.env.USERNAME;
-        loginData['LogOnDetails.Password'] = process.env.PASSWORD;
-    }
+        let loginResponse = await session.post(
+            'https://launchpad.classlink.com/login',
+            clLoginData,
+            {
+                headers: {
+                    'cookie': cookies,
+                    'csrf-token': csrftoken,
+                }
+            }
+        );
 
-    let loginUrl = `${link}HomeAccess/Account/LogOn`;
-    const { data: loginResponse } = await session.get(loginUrl);
-    const loginCheerio = cheerio.load(loginResponse);
-    loginData["__RequestVerificationToken"] = loginCheerio("input[name='__RequestVerificationToken']").val();
-    try {
-        const data = await session.post(loginUrl, loginData);
-        if (data.data.includes("incorrect") || data.data.includes("invalid")) {
-            return { status: 401, message: "Incorrect username or password" };
+        clLoginResult = loginResponse.data
+        if (clLoginResult.ResultCode == 0) {
+            return { status: 401, message: clLoginresult.ResultDescription };
         }
-        return session;
-    } catch (e) {
-        return { status: 500, message: "HAC is broken again" };
+        else {
+            await session.get(link + "HomeAccess/District/Student/SSO", {
+                headers: {
+                    'cookie': cookies,
+                },
+            });
+        }
     }
+    else {
+        if (loginData['LogOnDetails.UserName'] == process.env.TESTUSER && loginData['LogOnDetails.Password'] == process.env.TESTPSSWD) {
+            loginData['LogOnDetails.UserName'] = process.env.USERNAME;
+            loginData['LogOnDetails.Password'] = process.env.PASSWORD;
+        }
+
+        let loginUrl = `${link}HomeAccess/Account/LogOn`;
+        const { data: loginResponse } = await session.get(loginUrl);
+        const loginCheerio = cheerio.load(loginResponse);
+        loginData["__RequestVerificationToken"] = loginCheerio("input[name='__RequestVerificationToken']").val();
+        try {
+            const data = await session.post(loginUrl, loginData);
+            if (data.data.includes("incorrect") || data.data.includes("invalid")) {
+                return { status: 401, message: "Incorrect username or password" };
+            }
+            return session;
+        } catch (e) {
+            return { status: 500, message: "HAC is broken again" };
+        }
+    }
+    return session;
 }
 
 function formatLink(link) {
@@ -173,37 +184,7 @@ function verifyLogin(req, res) {
     }
 }
 
-app.get('/', (req, res) => {
-    res.send("HAC API")
-});
-
-app.get('/login', async (req, res) => {
-    const loginDetails = verifyLogin(req, res);
-    if (!loginDetails) return;
-
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    session = await loginSession(session, userLoginData, link);
-    if (typeof session == "object") {
-        res.status(session.status || 401).send({ "success": false, "message": session.message });
-        return
-    }
-    const sessionData = session.defaults.jar.toJSON();
-    res.send({
-        session: sessionData
-    });
-})
-
-app.get('/info', async (req, res) => {
-    const loginDetails = verifyLogin(req, res);
-    if (!loginDetails) return;
-
+async function startSession(req, loginDetails) {
     const { link, username, password } = loginDetails;
 
     let userLoginData = { ...loginData };
@@ -216,8 +197,41 @@ app.get('/info', async (req, res) => {
         const cookies = JSON.parse(req.query.session);
         session.defaults.jar = CookieJar.fromJSON(cookies);
     } else {
-        session = await loginSession(session, userLoginData, link);
+        session = await loginSession(session, userLoginData, link, req.query.classlink);
     }
+    return { link: link, session: session };
+}
+
+app.get('/', (req, res) => {
+    res.send("HAC API")
+});
+
+app.get('/login', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+
+    const { link, session } = await startSession(req, loginDetails);
+
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
+        return
+    }
+    const registration = await session.get(link + "HomeAccess/Content/Student/Registration.aspx");
+    if (registration.data.includes("Welcome to")) {
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
+        return;
+    }
+    const sessionData = session.defaults.jar.toJSON();
+    res.send({
+        session: sessionData
+    });
+})
+
+app.get('/info', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+
+    const { link, session } = await startSession(req, loginDetails);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -254,20 +268,7 @@ app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -347,7 +348,7 @@ app.get('/classes', async (req, res) => {
             if (assignment.score.includes('Missing')) {
                 assignment.badges.push("missing");
             }
-            if (assignment.score.includes('Exempt')) { 
+            if (assignment.score.includes('Exempt')) {
                 assignment.badges.push("exempt");
             }
             ret[classHeader].scores.push(assignment);
@@ -383,20 +384,7 @@ app.get('/grades', async (req, res) => {
         res.status(400).send({ "success": false, "message": `Missing required parameters (class)` });
         return;
     }
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(401).send({ "success": false, "message": "Invalid session" });
         return
@@ -483,7 +471,7 @@ app.get('/grades', async (req, res) => {
             if (assignment.score.includes('Missing')) {
                 assignment.badges.push("missing");
             }
-            if (assignment.score.includes('Exempt')) { 
+            if (assignment.score.includes('Exempt')) {
                 assignment.badges.push("exempt");
             }
             ret[classHeader].assignments.push(assignment);
@@ -510,118 +498,11 @@ app.get('/grades', async (req, res) => {
     });
 });
 
-// app.get('/classes', async (req, res) => {
-//     const loginDetails = verifyLogin(req, res);
-//     if (!loginDetails) return;
-
-//     const {link, username, password} = loginDetails;
-
-//     let userLoginData = {...loginData};
-//     userLoginData['LogOnDetails.UserName'] = username;
-//     userLoginData['LogOnDetails.Password'] = password;
-
-//     let session = createSession();
-
-//     if (req.query.session) {
-//         const cookies = JSON.parse(req.query.session);
-//         session.defaults.jar = CookieJar.fromJSON(cookies);
-//     } else {
-//         session = await loginSession(session, userLoginData, link);
-//     }
-//     if (typeof session == "object") {
-//         res.status(session.status || 401).send({"success": false, "message": session.message});
-//         return
-//     }
-
-//     const averages = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
-//     if (averages.data.includes("Welcome to")) {
-//         res.status(401).send({"success": false, "message": "Invalid Session"});
-//         return;
-//     }
-
-//     const listOfClasses = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
-
-//     var $ = cheerio.load(averages.data);
-//     if (req.query.term) {
-//         let newTerm = {...termData};
-//         var viewstate = $('input[name="__VIEWSTATE"]').val();
-//         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
-//         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
-//         newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
-//         newTerm["__VIEWSTATE"] = viewstate;
-//         newTerm["__EVENTVALIDATION"] = eventvalidation;
-//         scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
-//         $ = cheerio.load(scores.data);
-//     }
-//     const $$ = cheerio.load(listOfClasses.data);
-//     let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
-//     let termList = $('#plnMain_ddlReportCardRuns').find('option').toArray().map(e => $(e).text().trim()).slice(1);
-//     // little bit redundant but required to keep classes in period order
-//     const classes = [];
-//     $('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').each(function () {
-//         classes.push($(this).text().trim());
-//     });
-
-//     const courses = classes.map(c => {
-//         const {classHeader, courseName} = splitClassHeaderAndCourseName(c);
-//         return classHeader.trim();
-//     });
-//     let ret = {};
-
-//     $$('.sg-asp-table-data-row').each(function () {
-//         const courseText = $(this).children().first().text().trim();
-//         if (courses.includes(courseText)) {
-//             ret[courseText] = {
-//                 course: courseText,
-//                 name: $(this).children().eq(1).find('a').text().trim(),
-//                 period: $(this).children().eq(2).text().trim().substring(0, 1),
-//                 teacher: $(this).children().eq(3).text().trim(),
-//                 room: $(this).children().eq(4).text().trim(),
-//             };
-//         }
-//     });
-
-//     $('.AssignmentClass').each(function () {
-//         const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
-//         if (!ret[classHeader]) {
-//             ret[classHeader] = {
-//                 course: classHeader + " (dropped)",
-//                 name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
-//                 period: "dropped",
-//             }
-//         }
-//         ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
-//     });
-
-//     ret = Object.values(ret);
-//     const sessionData = session.defaults.jar.toJSON()
-//     res.send({
-//         termList: termList,
-//         term: term,
-//         classes: ret,
-//         session: sessionData,
-//     });
-//     return;
-// });
-
 app.get('/schedule', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -656,20 +537,7 @@ app.get('/attendance', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -783,20 +651,7 @@ app.get('/attendance', async (req, res) => {
 
 app.get('/teachers', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         console.log(session.message);
@@ -829,20 +684,7 @@ app.get('/ipr', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
@@ -917,20 +759,7 @@ app.get('/reportCard', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
@@ -1030,20 +859,7 @@ app.get('/transcript', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, username, password } = loginDetails;
-
-    let userLoginData = { ...loginData };
-    userLoginData['LogOnDetails.UserName'] = username;
-    userLoginData['LogOnDetails.Password'] = password;
-
-    let session = createSession();
-
-    if (req.query.session) {
-        const cookies = JSON.parse(req.query.session);
-        session.defaults.jar = CookieJar.fromJSON(cookies);
-    } else {
-        session = await loginSession(session, userLoginData, link);
-    }
+    const { link, session } = await startSession(req, loginDetails);
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
