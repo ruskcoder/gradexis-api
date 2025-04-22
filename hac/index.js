@@ -5,6 +5,7 @@ const cheerio = require('cheerio');
 const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
 const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent/http');
+const { validate } = require('tough-cookie/dist/validators');
 
 const app = express();
 const port = 4000;
@@ -130,11 +131,28 @@ async function loginSession(session, loginData, link, clDistrict = "") {
             }
         );
 
-        clLoginResult = loginResponse.data
+        let clLoginResult = loginResponse.data
         if (clLoginResult.ResultCode == 0) {
-            return { status: 401, message: clLoginresult.ResultDescription };
+            return {link: link, session: { status: 401, message: clLoginResult.ResultDescription }}
         }
         else {
+            if (!link) {
+                let code = (await session.get(clLoginResult['login_url'], {
+                    maxRedirects: 0,
+                    validateStatus: (status) => {
+                        return status >= 200 && status < 400;
+                    }
+                })).headers.location.split('code=')[1].split('&')[0];
+                let token = (await session.get(
+                    `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code
+                `)).data.token
+                let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?', 
+                    {
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    }
+                )).data;
+                link = 'https://' + clapps.find(app => app.name.toLowerCase().includes('hac') || app.name.toLowerCase().includes('home access')).url[0].split('/')['2'] + '/';    
+            }
             await session.get(link + "HomeAccess/District/Student/SSO", {
                 headers: {
                     'cookie': cookies,
@@ -155,14 +173,14 @@ async function loginSession(session, loginData, link, clDistrict = "") {
         try {
             const data = await session.post(loginUrl, loginData);
             if (data.data.includes("incorrect") || data.data.includes("invalid")) {
-                return { status: 401, message: "Incorrect username or password" };
+                return { link: link, session: { status: 401, message: "Invalid username or password" } };
             }
-            return session;
+            return { link: link, session: session };
         } catch (e) {
-            return { status: 500, message: "HAC is broken again" };
+            return {link: link, session: { status: 500, message: "HAC is broken again" }}
         }
     }
-    return session;
+    return { link: link, session: session };
 }
 
 function formatLink(link) {
@@ -176,8 +194,8 @@ function formatLink(link) {
 }
 
 function verifyLogin(req, res) {
-    if (!req.query.link || !req.query.username || !req.query.password) {
-        res.status(400).send({ "success": false, "message": `Missing required parameters (link, username, password)` });
+    if (!req.query.username || !req.query.password || !(req.query.classlink || req.query.link)) {
+        res.status(400).send({ "success": false, "message": `Missing one or more required parameters` });
         return false;
     } else {
         return { link: formatLink(req.query.link), username: req.query.username, password: req.query.password };
@@ -185,7 +203,7 @@ function verifyLogin(req, res) {
 }
 
 async function startSession(req, loginDetails) {
-    const { link, username, password } = loginDetails;
+    let { link, username, password } = loginDetails;
 
     let userLoginData = { ...loginData };
     userLoginData['LogOnDetails.UserName'] = username;
@@ -196,8 +214,11 @@ async function startSession(req, loginDetails) {
     if (req.query.session) {
         const cookies = JSON.parse(req.query.session);
         session.defaults.jar = CookieJar.fromJSON(cookies);
+        if (!link) {
+            link = formatLink(cookies.cookies.find(cookie => cookie.key === '.AuthCookie').domain);
+        }
     } else {
-        session = await loginSession(session, userLoginData, link, req.query.classlink);
+        ({ link, session } = await loginSession(session, userLoginData, link, req.query.classlink));
     }
     return { link: link, session: session };
 }
@@ -259,6 +280,7 @@ app.get('/info', async (req, res) => {
     const sessionData = session.defaults.jar.toJSON()
     res.send({
         ...ret,
+        link: link,
         session: sessionData,
     });
     return;
