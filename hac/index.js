@@ -109,7 +109,7 @@ function splitClassHeaderAndCourseName(c) {
     return { classHeader, courseName };
 }
 
-async function loginSession(session, loginData, link, clDistrict = "") {
+async function loginSession(session, loginData, link, clDistrict = "", res) {
     if (clDistrict) {
         let clLoginData = { ...classlinkLoginData };
         clLoginData.username = loginData['LogOnDetails.UserName'];
@@ -119,7 +119,10 @@ async function loginSession(session, loginData, link, clDistrict = "") {
         let clSession = await session.get('https://launchpad.classlink.com/katyisd');
         let csrftoken = clSession.data.split('"csrfToken":"')[1].split('"')[0];
         let cookies = clSession.headers['set-cookie'].join('; ');
-
+        res.writejson({
+            percent: 24,
+            message: 'Logging in to ClassLink'
+        })
         let loginResponse = await session.post(
             'https://launchpad.classlink.com/login',
             clLoginData,
@@ -133,10 +136,14 @@ async function loginSession(session, loginData, link, clDistrict = "") {
 
         let clLoginResult = loginResponse.data
         if (clLoginResult.ResultCode == 0) {
-            return {link: link, session: { status: 401, message: clLoginResult.ResultDescription }}
+            return { link: link, session: { status: 401, message: clLoginResult.ResultDescription } }
         }
         else {
             if (!link) {
+                res.writejson({
+                    percent: 34,
+                    message: 'Fetching HAC URL'
+                })
                 let code = (await session.get(clLoginResult['login_url'], {
                     maxRedirects: 0,
                     validateStatus: (status) => {
@@ -146,13 +153,17 @@ async function loginSession(session, loginData, link, clDistrict = "") {
                 let token = (await session.get(
                     `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code
                 `)).data.token
-                let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?', 
+                let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?',
                     {
-                        headers: { 'Authorization': `Bearer ${token}` } 
+                        headers: { 'Authorization': `Bearer ${token}` }
                     }
                 )).data;
-                link = 'https://' + clapps.find(app => app.name.toLowerCase().includes('hac') || app.name.toLowerCase().includes('home access')).url[0].split('/')['2'] + '/';    
+                link = 'https://' + clapps.find(app => app.name.toLowerCase().includes('hac') || app.name.toLowerCase().includes('home access')).url[0].split('/')['2'] + '/';
             }
+            res.writejson({
+                percent: 46,
+                message: 'Logging into HAC'
+            })
             await session.get(link + "HomeAccess/District/Student/SSO", {
                 headers: {
                     'cookie': cookies,
@@ -177,7 +188,7 @@ async function loginSession(session, loginData, link, clDistrict = "") {
             }
             return { link: link, session: session };
         } catch (e) {
-            return {link: link, session: { status: 500, message: "HAC is broken again" }}
+            return { link: link, session: { status: 500, message: "HAC is broken again" } }
         }
     }
     return { link: link, session: session };
@@ -202,7 +213,7 @@ function verifyLogin(req, res) {
     }
 }
 
-async function startSession(req, loginDetails) {
+async function startSession(req, res, loginDetails) {
     let { link, username, password } = loginDetails;
 
     let userLoginData = { ...loginData };
@@ -218,9 +229,20 @@ async function startSession(req, loginDetails) {
             link = formatLink(cookies.cookies.find(cookie => cookie.key === '.AuthCookie').domain);
         }
     } else {
-        ({ link, session } = await loginSession(session, userLoginData, link, req.query.classlink));
+        ({ link, session } = await loginSession(session, userLoginData, link, req.query.classlink, res));
     }
     return { link: link, session: session };
+}
+
+function updateRes(res, req) {
+    if (req.query.stream != "true") {
+        res.write = function (a) { }
+    }
+    else {
+        res.send = function (a) { res.write(JSON.stringify(a)); res.end(); };
+    }
+    res.writejson = function (a) { res.write(JSON.stringify(a) + "\n\n"); };
+    return res;
 }
 
 app.get('/', (req, res) => {
@@ -230,8 +252,9 @@ app.get('/', (req, res) => {
 app.get('/login', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -251,8 +274,10 @@ app.get('/login', async (req, res) => {
 app.get('/info', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -289,8 +314,14 @@ app.get('/info', async (req, res) => {
 app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    res.writejson({
+        percent: 0,
+        message: 'Logging In...'
+    });
+    const { link, session } = await startSession(req, res, loginDetails);
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -311,9 +342,17 @@ app.get('/classes', async (req, res) => {
         newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
         newTerm["__VIEWSTATE"] = viewstate;
         newTerm["__EVENTVALIDATION"] = eventvalidation;
+        res.writejson({
+            percent: 70,
+            message: 'Going to term'
+        });
         scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
         $ = cheerio.load(scores.data);
     }
+    res.writejson({
+        percent: 83,
+        message: 'Fetching classes'
+    });
     const schedule = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
     const $$ = cheerio.load(schedule.data);
 
@@ -402,11 +441,14 @@ app.get('/classes', async (req, res) => {
 app.get('/grades', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
     if (!req.query.class) {
         res.status(400).send({ "success": false, "message": `Missing required parameters (class)` });
         return;
     }
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(401).send({ "success": false, "message": "Invalid session" });
         return
@@ -523,8 +565,11 @@ app.get('/grades', async (req, res) => {
 app.get('/schedule', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -558,8 +603,11 @@ app.get('/schedule', async (req, res) => {
 app.get('/attendance', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -673,7 +721,12 @@ app.get('/attendance', async (req, res) => {
 
 app.get('/teachers', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
-    const { link, session } = await startSession(req, loginDetails);
+    if (!loginDetails) return;
+    res = updateRes(res, req);
+
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         console.log(session.message);
@@ -705,8 +758,11 @@ app.get('/teachers', async (req, res) => {
 app.get('/ipr', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
@@ -780,8 +836,11 @@ app.get('/ipr', async (req, res) => {
 app.get('/reportCard', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
@@ -880,8 +939,11 @@ app.get('/reportCard', async (req, res) => {
 app.get('/transcript', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
-    const { link, session } = await startSession(req, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
+
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
