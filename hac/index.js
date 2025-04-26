@@ -743,7 +743,7 @@ app.get('/teachers', async (req, res) => {
         let current = {};
         current['class'] = $(this).children().eq(1).text().trim();
         const teacherInfo = $(this).children().eq(3).find('a');
-        current['email'] = teacherInfo.attr('href').replace('mailto:', '').trim();
+        current['email'] = String(teacherInfo.attr('href')).replace('mailto:', '').trim();
         current['teacher'] = teacherInfo.text().trim();
         ret.push(current);
     });
