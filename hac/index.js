@@ -1020,7 +1020,7 @@ app.get('/transcript', async (req, res) => {
 
     const sessionData = session.defaults.jar.toJSON();
     res.send({
-        transcript: transcript,
+        transcriptData: transcript,
         session: sessionData,
     });
 });
