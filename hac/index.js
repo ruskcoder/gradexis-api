@@ -1025,6 +1025,13 @@ app.get('/transcript', async (req, res) => {
     });
 });
 
+app.get('/bellSchedule', async (req, res) => {
+    res.status(404).send({
+        success: false,
+        message: "Bell Schedule not found"
+    }); 
+});
+
 app.listen(port, () => {
     console.log(`HAC App listening at http://localhost:${port}`);
 });
