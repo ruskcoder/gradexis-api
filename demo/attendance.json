@@ -1,0 +1,19 @@
+{
+    "month": "May",
+    "year": "2025",
+    "events": {
+        "5/23/25": {
+            "event": "School Closed",
+            "color": "#cccccc"
+        }
+    },
+    "session": {
+        "version": "tough-cookie@5.0.0",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+    }
+}
