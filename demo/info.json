@@ -1,0 +1,19 @@
+{
+    "name": "Sharda, Vatsal Pawan",
+    "grade": "09",
+    "school": "Cinco Ranch HS",
+    "dob": "8/23/2010",
+    "counselor": "Lindgren, Fiona",
+    "language": "Hindi",
+    "cohort-year": "2028",
+    "link": "https://homeaccess.katyisd.org/",
+    "session": {
+        "version": "tough-cookie@5.0.0",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+    }
+}

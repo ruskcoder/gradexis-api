@@ -1,0 +1,816 @@
+{
+    "scoresIncluded": true,
+    "termList": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+    ],
+    "term": "6",
+    "classes": [
+        {
+            "course": "0271B - 8",
+            "name": "AP COMP SCI M B",
+            "period": "1",
+            "teacher": "Ponce De Leon, Antonio",
+            "room": "2224",
+            "average": "94.30%",
+            "scores": [
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "",
+                    "name": "AP Exam Review",
+                    "category": "Major",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/29/2025",
+                    "dateAssigned": "",
+                    "name": "MCQ AP Test",
+                    "category": "Major",
+                    "score": "98.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "98.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "98.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/25/2025",
+                    "dateAssigned": "",
+                    "name": "Week 3 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/24/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 4",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/23/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 3",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/22/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 2",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 1",
+                    "category": "Minor",
+                    "score": "M     - Missing",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "0.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "0.00%",
+                    "badges": [
+                        "missing"
+                    ]
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "Week 2 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "",
+                    "name": "Week 1 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Major": {
+                    "studentsPoints": "198.0000",
+                    "maximumPoints": "200.00",
+                    "percent": "99.000%",
+                    "categoryWeight": "70.00",
+                    "categoryPoints": "69.300000"
+                },
+                "Minor": {
+                    "studentsPoints": "300.0000",
+                    "maximumPoints": "400.00",
+                    "percent": "75.000%",
+                    "categoryWeight": "20.00",
+                    "categoryPoints": "15.000000"
+                },
+                "Other": {
+                    "studentsPoints": "300.0000",
+                    "maximumPoints": "300.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "6339B - 1",
+            "name": "SPAN 3 KAP B",
+            "period": "2",
+            "teacher": "Wagner, Mennell",
+            "room": "1216",
+            "average": "100.00%",
+            "scores": [
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "",
+                    "name": "Ensayo Argumentativo",
+                    "category": "Major",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "Infografía",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "Vocab Quiz (Unit 6)",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/14/2025",
+                    "dateAssigned": "",
+                    "name": "Analisis de una lectura",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "",
+                    "name": "Calentamiento Global",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/08/2025",
+                    "dateAssigned": "",
+                    "name": "Oraciones",
+                    "category": "Other",
+                    "score": "X     - Exempt",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "0.00%",
+                    "badges": [
+                        "exempt"
+                    ]
+                }
+            ],
+            "categories": {
+                "Major": {
+                    "studentsPoints": "100.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "60.00",
+                    "categoryPoints": "60.000000"
+                },
+                "Minor": {
+                    "studentsPoints": "200.0000",
+                    "maximumPoints": "200.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "30.00",
+                    "categoryPoints": "30.000000"
+                },
+                "Other": {
+                    "studentsPoints": "200.0000",
+                    "maximumPoints": "200.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "0471B - 34",
+            "name": "BIO KAP B",
+            "period": "3",
+            "teacher": "Hsu, Joshua",
+            "room": "2005",
+            "average": "96.25%",
+            "scores": [
+                {
+                    "dateDue": "04/28/2025",
+                    "dateAssigned": "04/17/2025",
+                    "name": "STEM Careers Project",
+                    "category": "Major",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/14/2025",
+                    "dateAssigned": "04/14/2025",
+                    "name": "Mock STAAR",
+                    "category": "Minor",
+                    "score": "95.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "95.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "95.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/09/2025",
+                    "dateAssigned": "04/07/2025",
+                    "name": "Biology STAAR Review",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Minor": {
+                    "studentsPoints": "95.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "95.000%",
+                    "categoryWeight": "30.00",
+                    "categoryPoints": "28.500000"
+                },
+                "Other": {
+                    "studentsPoints": "100.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "0347B - 11",
+            "name": "AP HUMAN GEO B",
+            "period": "4",
+            "teacher": "Gage, Emma",
+            "room": "2018",
+            "average": "99.13%",
+            "scores": [
+                {
+                    "dateDue": "05/16/2025",
+                    "dateAssigned": "",
+                    "name": "Movie Project",
+                    "category": "Major",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "05/12/2025",
+                    "dateAssigned": "",
+                    "name": "Movie Notes",
+                    "category": "Other",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "04/14/2025",
+                    "name": "Semester 1 & 2 Review Packet",
+                    "category": "Major",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "04/17/2025",
+                    "name": "MCQ HW: Master Review",
+                    "category": "Minor",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ HW: Master Review",
+                    "category": "Minor",
+                    "score": "",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "04/15/2025",
+                    "name": "Diagnostic Exam Results",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/14/2025",
+                    "dateAssigned": "",
+                    "name": "Unit 7 Vocab Packet",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/14/2025",
+                    "dateAssigned": "",
+                    "name": "Unit 7 Exam",
+                    "category": "Major",
+                    "score": "98.75",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "98.75",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "98.75%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "",
+                    "name": "7.8 Classwork",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/10/2025",
+                    "dateAssigned": "",
+                    "name": "7.7 Classwork",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/10/2025",
+                    "dateAssigned": "",
+                    "name": "7.6 Classwork",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Major": {
+                    "studentsPoints": "98.7500",
+                    "maximumPoints": "100.00",
+                    "percent": "98.750%",
+                    "categoryWeight": "70.00",
+                    "categoryPoints": "69.125000"
+                },
+                "Minor": {
+                    "studentsPoints": "100.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "20.00",
+                    "categoryPoints": "20.000000"
+                },
+                "Other": {
+                    "studentsPoints": "400.0000",
+                    "maximumPoints": "400.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "0253B - 31",
+            "name": "ALG 2 KAP B",
+            "period": "5",
+            "teacher": "Nuti, Vyjayanthi",
+            "room": "2209",
+            "average": "94.50%",
+            "scores": [
+                {
+                    "dateDue": "04/30/2025",
+                    "dateAssigned": "04/30/2025",
+                    "name": "Logs Quiz",
+                    "category": "Minor",
+                    "score": "96.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "96.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "96.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/28/2025",
+                    "dateAssigned": "04/25/2025",
+                    "name": "Pg-19",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/25/2025",
+                    "dateAssigned": "04/24/2025",
+                    "name": "Pg 17",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/23/2025",
+                    "dateAssigned": "04/22/2025",
+                    "name": "Pages 1-2 ,Mod 16",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "04/17/2025",
+                    "name": "Mod 13 Quiz",
+                    "category": "Minor",
+                    "score": "92.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "92.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "92.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/15/2025",
+                    "dateAssigned": "04/14/2025",
+                    "name": "Review WS- Exponential Fns- Pgs 16-17",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "04/11/2025",
+                    "name": "Factoring Quiz",
+                    "category": "Minor",
+                    "score": "90.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "90.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "90.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "04/10/2025",
+                    "name": "Pages 14-15 Mod-13",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/10/2025",
+                    "dateAssigned": "04/09/2025",
+                    "name": "Factoring WS- Canvas",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/08/2025",
+                    "dateAssigned": "04/07/2025",
+                    "name": "Pages 8-9 Mod-13",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Minor": {
+                    "studentsPoints": "278.0000",
+                    "maximumPoints": "300.00",
+                    "percent": "92.666%",
+                    "categoryWeight": "30.00",
+                    "categoryPoints": "27.800100"
+                },
+                "Other": {
+                    "studentsPoints": "700.0000",
+                    "maximumPoints": "700.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "0020B - 110",
+            "name": "STUDY HALL (INSTRUCT)",
+            "period": "6",
+            "teacher": "O'Callaghan, Jennifer",
+            "room": "9CAFE",
+            "average": "",
+            "scores": [],
+            "categories": {}
+        },
+        {
+            "course": "0141B - 38",
+            "name": "ENG 1 KAP B",
+            "period": "7",
+            "teacher": "Messenger, Brittany",
+            "room": "2008",
+            "average": "91.90%",
+            "scores": [
+                {
+                    "dateDue": "04/29/2025",
+                    "dateAssigned": "04/24/2025",
+                    "name": "Infographic Analysis",
+                    "category": "Minor",
+                    "score": "97.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "97.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "97.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/28/2025",
+                    "dateAssigned": "04/28/2025",
+                    "name": "Fahrenheit 451 Part 1",
+                    "category": "Major",
+                    "score": "88.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "88.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "88.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "04/17/2025",
+                    "name": "Long Write Reflection #2",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "04/14/2025",
+                    "name": "Category Tracking",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "04/11/2025",
+                    "name": "Long Write Reflection",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/10/2025",
+                    "dateAssigned": "04/07/2025",
+                    "name": "Clarisse and Montag Interaction Page",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Major": {
+                    "studentsPoints": "88.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "88.000%",
+                    "categoryWeight": "60.00",
+                    "categoryPoints": "52.800000"
+                },
+                "Minor": {
+                    "studentsPoints": "97.0000",
+                    "maximumPoints": "100.00",
+                    "percent": "97.000%",
+                    "categoryWeight": "30.00",
+                    "categoryPoints": "29.100000"
+                },
+                "Other": {
+                    "studentsPoints": "400.0000",
+                    "maximumPoints": "400.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "6991B - 1",
+            "name": "APTASCAL B",
+            "period": "1",
+            "teacher": "Staff",
+            "room": "N/A",
+            "average": "",
+            "scores": [],
+            "categories": {}
+        }
+    ],
+    "session": {
+        "version": "tough-cookie@5.0.0",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+    }
+}
