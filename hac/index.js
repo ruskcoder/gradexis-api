@@ -10,7 +10,7 @@ const { validate } = require('tough-cookie/dist/validators');
 const app = express();
 const port = 4000;
 
-monthInputs = {
+hac_monthInputs = {
     'january': 0, 'jan': 0, '01': 0, 1: 0,
     'february': 1, 'feb': 1, '02': 1, 2: 1,
     'march': 2, 'mar': 2, '03': 2, 3: 2,
@@ -24,8 +24,8 @@ monthInputs = {
     'november': 10, 'nov': 10, 11: 10,
     'december': 11, 'dec': 11, 12: 11,
 }
-monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-loginData = {
+hac_monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+hac_loginData = {
     "__RequestVerificationToken": "",
     "SCKTY00328510CustomEnabled": true,
     "SCKTY00436568CustomEnabled": true,
@@ -36,7 +36,7 @@ loginData = {
     "tempPW": "",
     "LogOnDetails.Password": "",
 }
-classlinkLoginData = {
+hac_classlinkLoginData = {
     username: '',
     password: '',
     os: 'Windows',
@@ -45,14 +45,14 @@ classlinkLoginData = {
     Browser: 'Chrome',
     Resolution: '1920x1080'
 };
-termData = {
+hac_termData = {
     "__EVENTTARGET": "ctl00$plnMain$btnRefreshView",
     "__EVENTARGUMENT": "",
     "__LASTFOCUS": "",
     "__VIEWSTATEGENERATOR": "B0093F3C",
     "ctl00$plnMain$ddlReportCardRuns": "",
 }
-monthData = {
+hac_monthData = {
     "__EVENTTARGET": "ctl00$plnMain$cldAttendance",
     "__EVENTARGUMENT": "",
     "__VIEWSTATE": "",
@@ -73,7 +73,7 @@ monthData = {
     "ctl00$plnMain$hdnHyperlinkText_exist": "(Alerts Are Limited. Click to View List of Selected Choices.)",
     "ctl00$plnMain$hdnHyperlinkText_Noexist": "(Limit Alerts to Specific Types of Attendance)",
 }
-monthHeaders = {
+hac_monthHeaders = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Accept-Language": "en-US,en;q=0.9",
     "Cache-Control": "max-age=0",
@@ -111,7 +111,7 @@ function splitClassHeaderAndCourseName(c) {
 
 async function loginSession(session, loginData, link, clDistrict = "", res) {
     if (clDistrict) {
-        let clLoginData = { ...classlinkLoginData };
+        let clLoginData = { ...hac_classlinkLoginData };
         clLoginData.username = loginData['LogOnDetails.UserName'];
         clLoginData.password = loginData['LogOnDetails.Password'];
         clLoginData.code = clDistrict;
@@ -216,7 +216,7 @@ function verifyLogin(req, res) {
 async function startSession(req, res, loginDetails) {
     let { link, username, password } = loginDetails;
 
-    let userLoginData = { ...loginData };
+    let userLoginData = { ...hac_loginData };
     userLoginData['LogOnDetails.UserName'] = username;
     userLoginData['LogOnDetails.Password'] = password;
 
@@ -335,7 +335,7 @@ app.get('/classes', async (req, res) => {
 
     var $ = cheerio.load(scores.data);
     if (req.query.term) {
-        let newTerm = { ...termData };
+        let newTerm = { ...hac_termData };
         var viewstate = $('input[name="__VIEWSTATE"]').val();
         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
@@ -462,7 +462,7 @@ app.get('/grades', async (req, res) => {
 
     var $ = cheerio.load(scores.data);
     if (req.query.term) {
-        let newTerm = { ...termData };
+        let newTerm = { ...hac_termData };
         var viewstate = $('input[name="__VIEWSTATE"]').val();
         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
         var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
@@ -616,7 +616,7 @@ app.get('/attendance', async (req, res) => {
     if (req.query.date) {
         var reqMonth = req.query.date.split('-')[0];
         var reqYear = req.query.date.split('-')[1];
-        var monthIndex = monthInputs[reqMonth.toLowerCase()];
+        var monthIndex = hac_monthInputs[reqMonth.toLowerCase()];
         if (monthIndex === -1) {
             res.status(400).send({ "success": false, "message": "Invalid month name" });
             return;
@@ -640,7 +640,7 @@ app.get('/attendance', async (req, res) => {
         let loops = 0;
         while (loops < maxloops) {
             loops++;
-            let newMonth = { ...monthData };
+            let newMonth = { ...hac_monthData };
             newMonth["__VIEWSTATE"] = $('input[name="__VIEWSTATE"]').val();
             newMonth["__EVENTVALIDATION"] = $('input[name="__EVENTVALIDATION"]').val();
 
@@ -652,7 +652,7 @@ app.get('/attendance', async (req, res) => {
             if (!prevelem.text() || !nextelem.text()) {
                 const sessionData = session.defaults.jar.toJSON()
                 res.send({
-                    month: monthNames[monthIndex],
+                    month: hac_monthNames[monthIndex],
                     year: reqYear,
                     events: {},
                     session: sessionData,
@@ -1029,7 +1029,7 @@ app.get('/bellSchedule', async (req, res) => {
     res.status(404).send({
         success: false,
         message: "Bell Schedule not found"
-    }); 
+    });
 });
 
 module.exports = app;

@@ -15,7 +15,7 @@ function swap(json) {
     return ret;
 }
 
-loginData = {
+ps_loginData = {
     dbpw: "",
     translator_username: "",
     translator_password: "",
@@ -32,25 +32,6 @@ loginData = {
     translatorpw: "",
 }
 
-classHeaders = {
-    accept: "application/json, text/plain, */*",
-    "accept-encoding": "gzip, deflate, br, zstd",
-    "accept-language": "en-US,en;q=0.9",
-    connection: "keep-alive",
-    "content-type": "application/json;charset=UTF-8",
-    // expect: "",
-    host: "hisdconnect.houstonisd.org",
-    origin: "https://hisdconnect.houstonisd.org",
-    referer: "https://hisdconnect.houstonisd.org/guardian/scores.html?frn=00420077269&begdate=01/07/2025&enddate=01/24/2025&fg=P4&schoolid=26",
-    "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"
-};
-
 async function loginSession(session, loginData, link, res) {
     let loginUrl = `${link}guardian/home.html`;
     try {
@@ -60,9 +41,8 @@ async function loginSession(session, loginData, link, res) {
         }
         return { link: link, session: session, response: data.data };
     } catch (e) {
-        return { link: link, session: { status: 500, message: "HAC is broken again" } }
+        return { link: link, session: { status: 500, message: "PowerSchool returned an error" } }
     }
-    return { link: link, session: session };
 }
 
 function formatLink(link) {
@@ -110,7 +90,7 @@ function updateRes(res, req) {
 async function startSession(req, res, loginDetails, mainpage = false) {
     let { link, username, password } = loginDetails;
 
-    let userLoginData = { ...loginData };
+    let userLoginData = { ...ps_loginData };
     userLoginData.account = username;
     userLoginData.dbpw = password;
     userLoginData.pw = password;
@@ -145,7 +125,7 @@ app.get('/login', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage = true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -194,7 +174,7 @@ app.get('/classes', async (req, res) => {
         percent: 0,
         message: 'Logging In...'
     });
-    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage = true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -268,7 +248,7 @@ app.get('/grades', async (req, res) => {
         percent: 0,
         message: 'Logging In...'
     });
-    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage = true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -351,13 +331,11 @@ app.get('/grades', async (req, res) => {
 
         const data = (await session.post(
             `${link}ws/xte/assignment/lookup?_= ${Date.now()}`,
-            { 
-                "section_ids": [sectionId], 
-                "start_date": begDateFormatted, 
-                "end_date": endDateFormatted 
-            },
-            { headers: classHeaders }
-        )).data;
+            {
+                "section_ids": [sectionId],
+                "start_date": begDateFormatted,
+                "end_date": endDateFormatted
+            })).data;
         for (a in data) {
             assignment = data[a]['_assignmentsections'][0];
             let duedate = assignment.duedate.split('-');
@@ -365,7 +343,7 @@ app.get('/grades', async (req, res) => {
             let badges = []
             if (!assignment.iscountedinfinalgrade) {
                 badges.push('exempt');
-            } 
+            }
             if (score.length > 0) {
                 if (score[0].isexempt) {
                     badges.push('exempt');
@@ -382,7 +360,7 @@ app.get('/grades', async (req, res) => {
                 if (score[0].isincomplete) {
                     badges.push('incomplete');
                 }
-            }   
+            }
             let current = {
                 name: assignment.name,
                 category: assignment['_assignmentcategoryassociations'][0]['_teachercategory'].name,
@@ -418,7 +396,7 @@ app.get('/grades', async (req, res) => {
             categories[category].categoryPoints = ((percent / 100) * weight);
         }
     }
-    
+
     const sessionData = session.defaults.jar.toJSON();
     res.send({
         term: term,
