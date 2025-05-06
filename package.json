@@ -15,7 +15,6 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "live": "nodemon index.js",
-    "postinstall": "cd ./hac && npm install && cd .. && npm install cors express"
   },
   "keywords": [],
   "author": "",
