@@ -31,6 +31,21 @@ ps_loginData = {
     pw: "",
     translatorpw: "",
 }
+ps_classHeaders = {
+    accept: "application/json, text/plain, */*",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "en-US,en;q=0.9",
+    connection: "keep-alive",
+    "content-type": "application/json;charset=UTF-8",
+    // expect: "",
+    "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"
+};
 
 async function loginSession(session, loginData, link, res) {
     let loginUrl = `${link}guardian/home.html`;
@@ -328,14 +343,22 @@ app.get('/grades', async (req, res) => {
         let endDate = classLink.split("enddate=")[1].split("&")[0].split('/');
         let begDateFormatted = `${begDate[2]}-${begDate[0].replace(/^0+/, '')}-${begDate[1].replace(/^0+/, '')}`;
         let endDateFormatted = `${endDate[2]}-${endDate[0].replace(/^0+/, '')}-${endDate[1].replace(/^0+/, '')}`;
-
-        const data = (await session.post(
-            `${link}ws/xte/assignment/lookup?_= ${Date.now()}`,
-            {
-                "section_ids": [sectionId],
-                "start_date": begDateFormatted,
-                "end_date": endDateFormatted
-            })).data;
+        let data;
+        try {
+            data = (await session.post(
+                `${link}ws/xte/assignment/lookup?_= ${Date.now()}`,
+                {
+                    "section_ids": [sectionId],
+                    "start_date": begDateFormatted,
+                    "end_date": endDateFormatted
+                },
+                { headers: { ...ps_classHeaders, referer: `${link}guardian/${classLink}` } }
+            )).data;
+        }
+        catch (e) {
+            res.status(400).send({ "success": false, "message": `An error occurred. Please try again. ` });
+            return;
+        }
         for (a in data) {
             assignment = data[a]['_assignmentsections'][0];
             let duedate = assignment.duedate.split('-');
