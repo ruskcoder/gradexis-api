@@ -107,7 +107,7 @@ function updateRes(res, req) {
     return res;
 }
 
-async function startSession(req, res, loginDetails) {
+async function startSession(req, res, loginDetails, mainpage = false) {
     let { link, username, password } = loginDetails;
 
     let userLoginData = { ...loginData };
@@ -121,6 +121,16 @@ async function startSession(req, res, loginDetails) {
     if (req.query.session) {
         const cookies = JSON.parse(req.query.session);
         session.defaults.jar = CookieJar.fromJSON(cookies);
+        if (mainpage) {
+            const data = await session.get(`${link}guardian/home.html`);
+            if (data.data.includes("Invalid Username or Password!")) {
+                return { link: link, session: { status: 401, message: "Invalid username or password" } };
+            }
+            response = data.data;
+        }
+        else {
+            response = "";
+        }
     } else {
         ({ link, session, response } = await loginSession(session, userLoginData, link, res));
     }
@@ -135,7 +145,7 @@ app.get('/login', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
 
-    const { link, session, response } = await startSession(req, res, loginDetails);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -184,7 +194,7 @@ app.get('/classes', async (req, res) => {
         percent: 0,
         message: 'Logging In...'
     });
-    const { link, session, response } = await startSession(req, res, loginDetails);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -212,7 +222,6 @@ app.get('/classes', async (req, res) => {
         if (validRows[key] === mainTable.find('tr').length - 5) delete validRows[key];
     });
     const termlist = Object.keys(validRows)
-
     let currentTerm;
     if (req.query.term) {
         if (!termlist.includes(req.query.term)) {
@@ -259,7 +268,7 @@ app.get('/grades', async (req, res) => {
         percent: 0,
         message: 'Logging In...'
     });
-    const { link, session, response } = await startSession(req, res, loginDetails);
+    const { link, session, response } = await startSession(req, res, loginDetails, mainpage=true);
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -327,7 +336,14 @@ app.get('/grades', async (req, res) => {
             message: 'Getting scores'
         });
         const mainpage = (await session.get(`${link}guardian/${classLink}`)).data;
-        let sectionId = mainpage.split(`data-sectionid="`)[1].split('"')[0];
+        let sectionId = null;
+        try {
+            sectionId = mainpage.split(`data-sectionid="`)[1].split('"')[0];
+        }
+        catch (e) {
+            res.status(400).send({ "success": false, "message": `An error occurred. Please try again. ` });
+            return;
+        }
         let begDate = classLink.split("begdate=")[1].split("&")[0].split('/');
         let endDate = classLink.split("enddate=")[1].split("&")[0].split('/');
         let begDateFormatted = `${begDate[2]}-${begDate[0].replace(/^0+/, '')}-${begDate[1].replace(/^0+/, '')}`;
