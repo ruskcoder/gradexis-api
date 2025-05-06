@@ -389,7 +389,7 @@ app.get('/classes', async (req, res) => {
                 period: "dropped",
             }
         }
-        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
+        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop().slice(0, -1);
         ret[classHeader].scores = [];
 
         $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
@@ -515,8 +515,8 @@ app.get('/grades', async (req, res) => {
                 period: "dropped",
             }
         }
-        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
-        ret[classHeader].assignments = [];
+        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop().slice(0, -1);
+        ret[classHeader].scores = [];
 
         $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
             const assignment = {
@@ -538,7 +538,7 @@ app.get('/grades', async (req, res) => {
             if (assignment.score.includes('Exempt')) {
                 assignment.badges.push("exempt");
             }
-            ret[classHeader].assignments.push(assignment);
+            ret[classHeader].scores.push(assignment);
         });
         ret[classHeader].categories = {};
         $(this).find('.sg-content-grid .sg-asp-table-group tr.sg-asp-table-data-row').each(function () {

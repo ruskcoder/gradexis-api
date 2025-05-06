@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { wrapper } = require('axios-cookiejar-support');
-const { CookieJar } = require('tough-cookie');
+const { CookieJar, parseDate } = require('tough-cookie');
 
 const app = express();
 
@@ -32,6 +32,24 @@ loginData = {
     translatorpw: "",
 }
 
+classHeaders = {
+    accept: "application/json, text/plain, */*",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "en-US,en;q=0.9",
+    connection: "keep-alive",
+    "content-type": "application/json;charset=UTF-8",
+    // expect: "",
+    host: "hisdconnect.houstonisd.org",
+    origin: "https://hisdconnect.houstonisd.org",
+    referer: "https://hisdconnect.houstonisd.org/guardian/scores.html?frn=00420077269&begdate=01/07/2025&enddate=01/24/2025&fg=P4&schoolid=26",
+    "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"
+};
 
 async function loginSession(session, loginData, link, res) {
     let loginUrl = `${link}guardian/home.html`;
@@ -76,6 +94,17 @@ function verifyLogin(req, res) {
     } else {
         return { link: formatLink(req.query.link), username: req.query.username, password: req.query.password };
     }
+}
+
+function updateRes(res, req) {
+    if (req.query.stream != "true") {
+        res.write = function (a) { }
+    }
+    else {
+        res.send = function (a) { res.write(JSON.stringify(a)); res.end(); };
+    }
+    res.writejson = function (a) { res.write(JSON.stringify(a) + "\n\n"); };
+    return res;
 }
 
 async function startSession(req, res, loginDetails) {
@@ -149,7 +178,12 @@ app.get('/info', async (req, res) => {
 app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
+    res = updateRes(res, req);
 
+    res.writejson({
+        percent: 0,
+        message: 'Logging In...'
+    });
     const { link, session, response } = await startSession(req, res, loginDetails);
 
     if (typeof session == "object") {
@@ -185,7 +219,7 @@ app.get('/classes', async (req, res) => {
             res.status(400).send({ "success": false, "message": `Invalid term ${req.query.term}` });
             return;
         }
-        currentTerm = req.query.term;
+        currentTerm = req.query.term.toUpperCase();
     }
     else {
         currentTerm = termlist[termlist.length - 1];
@@ -209,12 +243,179 @@ app.get('/classes', async (req, res) => {
     const sessionData = session.defaults.jar.toJSON();
     res.send({
         scoresIncluded: false,
-        termlist: termlist,
+        termList: termlist,
         term: currentTerm,
         classes: classes,
         session: sessionData
     });
 })
 
+app.get('/grades', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+    res = updateRes(res, req);
+
+    res.writejson({
+        percent: 0,
+        message: 'Logging In...'
+    });
+    const { link, session, response } = await startSession(req, res, loginDetails);
+
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
+        return;
+    }
+    const $ = cheerio.load(response);
+    const mainTable = $('.linkDescList tbody');
+
+    if (!req.query.term || !req.query.class) {
+        res.status(400).send({ "success": false, "message": "Missing term or class parameter" });
+        return;
+    }
+    const term = req.query.term.toUpperCase();
+    const className = req.query.class;
+
+    if (!term || !className) {
+        res.status(400).send({ "success": false, "message": "Missing term or class parameter" });
+        return;
+    }
+
+    let termIndex = -1;
+    let classLink = null;
+    let period = null;
+    let teacher = null;
+    let room = null;
+    let average = null;
+
+    // Find the term index
+    mainTable.find('tr').first().children().each((i, el) => {
+        const text = $(el).text().trim();
+        if (text === term) {
+            termIndex = i + 8; // Add 8 to account for the offset
+        }
+    });
+
+    if (termIndex === -1) {
+        res.status(400).send({ "success": false, "message": `Invalid term: ${term}` });
+        return;
+    }
+
+    // Find the class and get the details
+    mainTable.find('tr:gt(1)').each((_, row) => {
+        const classCell = $(row).find('.table-element-text-align-start');
+        const classText = classCell.clone().children().remove().end().text().trim();
+
+        if (classText === className) {
+            const cell = $(row).children().eq(termIndex);
+            const link = cell.find('a').attr('href');
+            if (link) {
+                classLink = link;
+            }
+
+            period = $(row).find('td').eq(0).text().trim();
+            teacher = classCell.find('a').eq(1).text().slice(6).trim();
+            room = classCell.find('span').eq(0).find('span').eq(1).text().trim();
+            average = cell.find('a').contents().last().text().trim();
+            if (average === "[ i ]") average = ""; // Handle placeholder
+        }
+    });
+    let scores = [];
+    let categories = {};
+    if (classLink) {
+        res.writejson({
+            percent: 50,
+            message: 'Getting scores'
+        });
+        const mainpage = (await session.get(`${link}guardian/${classLink}`)).data;
+        let sectionId = mainpage.split(`data-sectionid="`)[1].split('"')[0];
+        let begDate = classLink.split("begdate=")[1].split("&")[0].split('/');
+        let endDate = classLink.split("enddate=")[1].split("&")[0].split('/');
+        let begDateFormatted = `${begDate[2]}-${begDate[0].replace(/^0+/, '')}-${begDate[1].replace(/^0+/, '')}`;
+        let endDateFormatted = `${endDate[2]}-${endDate[0].replace(/^0+/, '')}-${endDate[1].replace(/^0+/, '')}`;
+
+        const data = (await session.post(
+            `${link}ws/xte/assignment/lookup?_= ${Date.now()}`,
+            { 
+                "section_ids": [sectionId], 
+                "start_date": begDateFormatted, 
+                "end_date": endDateFormatted 
+            },
+            { headers: classHeaders }
+        )).data;
+        for (a in data) {
+            assignment = data[a]['_assignmentsections'][0];
+            let duedate = assignment.duedate.split('-');
+            let score = assignment['_assignmentscores']
+            let badges = []
+            if (!assignment.iscountedinfinalgrade) {
+                badges.push('exempt');
+            } 
+            if (score.length > 0) {
+                if (score[0].isexempt) {
+                    badges.push('exempt');
+                }
+                if (score[0].ismissing) {
+                    badges.push('missing');
+                }
+                if (score[0].islate) {
+                    badges.push('late');
+                }
+                if (score[0].isabsent) {
+                    badges.push('absent');
+                }
+                if (score[0].isincomplete) {
+                    badges.push('incomplete');
+                }
+            }   
+            let current = {
+                name: assignment.name,
+                category: assignment['_assignmentcategoryassociations'][0]['_teachercategory'].name,
+                totalPoints: assignment.totalpointvalue,
+                weight: assignment.weight,
+                weightedTotalPoints: assignment.weight * assignment.totalpointvalue,
+                score: score.length > 0 ? score[0].scorepoints : "",
+                weightedScore: score.length > 0 ? score[0].scorepoints * assignment.weight : "",
+                percentage: score.length > 0 ? score[0]['scorepercent'] + "%" : "",
+                dateDue: `${duedate[1]}/${duedate[2]}/${duedate[0]}`,
+                dateAssigned: `${duedate[1]}/${duedate[2]}/${duedate[0]}`,
+                badges: badges
+            }
+            if (current.score != "" && !badges.includes("exempt")) {
+                if (Object.keys(categories).includes(current.category)) {
+                    categories[current.category].studentsPoints += parseFloat(current.weightedScore);
+                    categories[current.category].maximumPoints += parseFloat(current.weightedTotalPoints);
+                }
+                else {
+                    categories[current.category] = {
+                        studentsPoints: parseFloat(current.weightedScore),
+                        maximumPoints: parseFloat(current.weightedTotalPoints),
+                    }
+                }
+            }
+            scores.push(current);
+        }
+        for (let category in categories) {
+            let weight = 100 / Object.keys(categories).length;
+            let percent = ((categories[category].studentsPoints / categories[category].maximumPoints) * 100);
+            categories[category].percent = percent + "%";
+            categories[category].categoryWeight = weight;
+            categories[category].categoryPoints = ((percent / 100) * weight);
+        }
+    }
+    
+    const sessionData = session.defaults.jar.toJSON();
+    res.send({
+        term: term,
+        course: className,
+        name: className,
+        period: period,
+        teacher: teacher,
+        room: room,
+        average: average,
+        scores: scores,
+        categories: categories,
+        session: sessionData
+    });
+});
 
 module.exports = app;
