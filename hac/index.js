@@ -394,24 +394,27 @@ app.get('/classes', async (req, res) => {
 
         $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
             let assignment = {
-                dateDue: $(this).children().eq(0).text().trim(),
-                dateAssigned: $(this).children().eq(1).text().trim(),
                 name: $(this).children().eq(2).children().first().text().trim(),
                 category: $(this).children().eq(3).text().trim(),
-                score: $(this).children().eq(4).text().trim(),
-                totalPoints: $(this).children().eq(5).text().trim(),
-                weight: $(this).children().eq(6).text().trim(),
-                weightedScore: $(this).children().eq(7).text().trim(),
-                weightedTotalPoints: $(this).children().eq(8).text().trim(),
                 percentage: $(this).children().eq(9).text().trim(),
+                score: $(this).children().eq(4).text().trim(),
+                totalPoints: parseFloat($(this).children().eq(5).text().trim()) || "",
+                weight: parseFloat($(this).children().eq(6).text().trim()) || "",
+                weightedScore: parseFloat($(this).children().eq(7).text().trim()) || "",
+                weightedTotalPoints: parseFloat($(this).children().eq(8).text().trim()) || "",
+                dateDue: $(this).children().eq(0).text().trim(),
+                dateAssigned: $(this).children().eq(1).text().trim(),
                 badges: []
             };
             if (assignment.score.includes('Missing')) {
                 assignment.badges.push("missing");
+                assignment.score = 0;
             }
             if (assignment.score.includes('Exempt')) {
                 assignment.badges.push("exempt");
+                assignment.score = ""
             }
+            assignment.score = parseFloat(assignment.score) || assignment.score;
             ret[classHeader].scores.push(assignment);
         });
         ret[classHeader].categories = {};
@@ -439,127 +442,17 @@ app.get('/classes', async (req, res) => {
 });
 
 app.get('/grades', async (req, res) => {
-    const loginDetails = verifyLogin(req, res);
-    if (!loginDetails) return;
-    res = updateRes(res, req);
     if (!req.query.class) {
-        res.status(400).send({ "success": false, "message": `Missing required parameters (class)` });
-        return;
+        return res.status(400).send({ success: false, message: "Missing required parameters (class)" });
     }
-    const { link, session } = await startSession(req, res, loginDetails);
-
-
-    if (typeof session == "object") {
-        res.status(401).send({ "success": false, "message": "Invalid session" });
-        return
-    }
-
-    var scores = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
-    if (scores.data.includes("Welcome to")) {
-        res.status(session.status || 401).send({ "success": false, "message": session.message });
-        return;
-    }
-
-    var $ = cheerio.load(scores.data);
-    if (req.query.term) {
-        let newTerm = { ...hac_termData };
-        var viewstate = $('input[name="__VIEWSTATE"]').val();
-        var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
-        var year = $('select[name="ctl00$plnMain$ddlReportCardRuns"] option').eq(1).val().substring(2);
-        newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
-        newTerm["__VIEWSTATE"] = viewstate;
-        newTerm["__EVENTVALIDATION"] = eventvalidation;
-        scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
-        $ = cheerio.load(scores.data);
-    }
-    if (!$('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').toArray().map(e => $(e).text().trim()).map(e => {
-        const { classHeader, courseName } = splitClassHeaderAndCourseName(e);
-        return courseName.trim();
-    }).includes(req.query.class)) {
-        res.status(400).send({ "success": false, "message": `Class not found` });
-        return;
-    }
-    const schedule = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
-    const $$ = cheerio.load(schedule.data);
-
-    const classes = [];
-    $('.AssignmentClass .sg-header .sg-header-heading:not(.sg-right)').each(function () {
-        classes.push($(this).text().trim());
-    });
-
-    let term = $('#plnMain_ddlReportCardRuns').find('option[selected="selected"]').text().trim();
-    const courses = classes.map(c => {
-        const { classHeader, courseName } = splitClassHeaderAndCourseName(c);
-        return classHeader.trim();
-    });
-    let ret = {};
-
-    $$('.sg-asp-table-data-row').each(function () {
-        const courseText = $(this).children().first().text().trim();
-        if (courses.includes(courseText)) {
-            ret[courseText] = {
-                course: courseText,
-                name: $(this).children().eq(1).find('a').text().trim(),
-                period: $(this).children().eq(2).text().trim().substring(0, 1),
-                teacher: $(this).children().eq(3).text().trim(),
-                room: $(this).children().eq(4).text().trim(),
-            };
-        }
-    });
-    $('.AssignmentClass').each(function () {
-        const classHeader = splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').text().trim()).classHeader.trim();
-        if (!ret[classHeader]) {
-            ret[classHeader] = {
-                course: classHeader,
-                name: splitClassHeaderAndCourseName($(this).find('.sg-header .sg-header-heading').eq(0).text().trim()).courseName.trim(),
-                period: "dropped",
-            }
-        }
-        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop().slice(0, -1);
-        ret[classHeader].scores = [];
-
-        $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
-            const assignment = {
-                dateDue: $(this).children().eq(0).text().trim(),
-                dateAssigned: $(this).children().eq(1).text().trim(),
-                name: $(this).children().eq(2).children().first().text().trim(),
-                category: $(this).children().eq(3).text().trim(),
-                score: $(this).children().eq(4).text().trim(),
-                totalPoints: $(this).children().eq(5).text().trim(),
-                weight: $(this).children().eq(6).text().trim(),
-                weightedScore: $(this).children().eq(7).text().trim(),
-                weightedTotalPoints: $(this).children().eq(8).text().trim(),
-                percentage: $(this).children().eq(9).text().trim(),
-                badges: []
-            };
-            if (assignment.score.includes('Missing')) {
-                assignment.badges.push("missing");
-            }
-            if (assignment.score.includes('Exempt')) {
-                assignment.badges.push("exempt");
-            }
-            ret[classHeader].scores.push(assignment);
+    const { data: classesData } = await axios.get(`${req.protocol}://${req.get('host')}/hac/classes`, { params: req.query });
+    const currentClass = classesData.classes.find(c => c.name === req.query.class);
+    res.send(
+        {
+            term: classesData.term,
+            ...currentClass,
+            session: classesData.session
         });
-        ret[classHeader].categories = {};
-        $(this).find('.sg-content-grid .sg-asp-table-group tr.sg-asp-table-data-row').each(function () {
-            const category = {
-                studentsPoints: $(this).children().eq(1).text().trim(),
-                maximumPoints: $(this).children().eq(2).text().trim(),
-                percent: $(this).children().eq(3).text().trim(),
-                categoryWeight: $(this).children().eq(4).text().trim(),
-                categoryPoints: $(this).children().eq(5).text().trim(),
-            };
-            ret[classHeader].categories[$(this).children().eq(0).text().trim()] = category;
-        });
-    });
-    ret = Object.values(ret);
-    ret = ret.find(c => c.name === req.query.class);
-    const sessionData = session.defaults.jar.toJSON()
-    res.send({
-        term: term,
-        ...ret,
-        session: sessionData,
-    });
 });
 
 app.get('/schedule', async (req, res) => {

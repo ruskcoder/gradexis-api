@@ -384,15 +384,16 @@ app.get('/grades', async (req, res) => {
                     badges.push('incomplete');
                 }
             }
+
             let current = {
                 name: assignment.name,
                 category: assignment['_assignmentcategoryassociations'][0]['_teachercategory'].name,
-                totalPoints: assignment.totalpointvalue,
+                percentage: score.length > 0 ? (score[0].scorepercent ? score[0].scorepercent + "%" : "0%") : "0%",
+                score: score.length > 0 ? (score[0].scorepoints ? score[0].scorepoints : "") : "",
+                totalPoints: assignment.scoreentrypoints,
                 weight: assignment.weight,
-                weightedTotalPoints: assignment.weight * assignment.totalpointvalue,
-                score: score.length > 0 ? score[0].scorepoints : "",
-                weightedScore: score.length > 0 ? score[0].scorepoints * assignment.weight : "",
-                percentage: score.length > 0 ? score[0]['scorepercent'] + "%" : "",
+                weightedTotalPoints: assignment.totalpointvalue,
+                weightedScore: score.length > 0 && score[0].scorepoints ? parseFloat((score[0].scorepoints * assignment.weight).toPrecision(4)) : "",
                 dateDue: `${duedate[1]}/${duedate[2]}/${duedate[0]}`,
                 dateAssigned: `${duedate[1]}/${duedate[2]}/${duedate[0]}`,
                 badges: badges
