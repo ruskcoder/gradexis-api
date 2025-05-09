@@ -290,6 +290,7 @@ app.get('/grades', async (req, res) => {
     let teacher = null;
     let room = null;
     let average = null;
+    let averageType = "percentwise";
 
     // Find the term index
     mainTable.find('tr').first().children().each((i, el) => {
@@ -366,11 +367,12 @@ app.get('/grades', async (req, res) => {
             let badges = []
             if (!assignment.iscountedinfinalgrade) {
                 badges.push('exempt');
+                console.log("exempt");
             }
             if (score.length > 0) {
-                if (score[0].isexempt) {
-                    badges.push('exempt');
-                }
+                // if (score[0].isexempt) {
+                //     badges.push('exempt');
+                // }
                 if (score[0].ismissing) {
                     badges.push('missing');
                 }
@@ -398,6 +400,9 @@ app.get('/grades', async (req, res) => {
                 dateAssigned: `${duedate[1]}/${duedate[2]}/${duedate[0]}`,
                 badges: badges
             }
+            if (current.weight != 1) {
+                averageType = "scorewise";
+            }
             if (current.score != "" && !badges.includes("exempt")) {
                 if (Object.keys(categories).includes(current.category)) {
                     categories[current.category].studentsPoints += parseFloat(current.weightedScore);
@@ -423,6 +428,7 @@ app.get('/grades', async (req, res) => {
 
     const sessionData = session.defaults.jar.toJSON();
     res.send({
+        averageType: averageType,
         term: term,
         course: className,
         name: className,

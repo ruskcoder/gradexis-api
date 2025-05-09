@@ -374,6 +374,7 @@ app.get('/classes', async (req, res) => {
         const courseText = $(this).children().first().text().trim();
         if (courses.includes(courseText)) {
             ret[courseText] = {
+                averageType: "categorywise",
                 course: courseText,
                 name: $(this).children().eq(1).find('a').text().trim(),
                 period: $(this).children().eq(2).text().trim().substring(0, 1),
