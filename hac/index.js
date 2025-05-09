@@ -326,15 +326,21 @@ app.get('/classes', async (req, res) => {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
-
+    res.writejson({
+        percent: 50,
+        message: 'Fetching classes'
+    });
     var scores = await session.get(link + "HomeAccess/Content/Student/Assignments.aspx");
     if (scores.data.includes("Welcome to")) {
         res.status(401).send({ "success": false, "message": "Invalid Session" });
         return;
     }
-
     var $ = cheerio.load(scores.data);
     if (req.query.term) {
+        res.writejson({
+            percent: 70,
+            message: 'Going to term'
+        });
         let newTerm = { ...hac_termData };
         var viewstate = $('input[name="__VIEWSTATE"]').val();
         var eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
@@ -342,16 +348,12 @@ app.get('/classes', async (req, res) => {
         newTerm["ctl00$plnMain$ddlReportCardRuns"] = `${req.query.term}-${year}`;
         newTerm["__VIEWSTATE"] = viewstate;
         newTerm["__EVENTVALIDATION"] = eventvalidation;
-        res.writejson({
-            percent: 70,
-            message: 'Going to term'
-        });
         scores = await session.post(link + "HomeAccess/Content/Student/Assignments.aspx", newTerm);
         $ = cheerio.load(scores.data);
     }
     res.writejson({
         percent: 83,
-        message: 'Fetching classes'
+        message: 'Crunching data'
     });
     const schedule = await session.get(link + "HomeAccess/Content/Student/Classes.aspx");
     const $$ = cheerio.load(schedule.data);
@@ -406,11 +408,11 @@ app.get('/classes', async (req, res) => {
                 dateAssigned: $(this).children().eq(1).text().trim(),
                 badges: []
             };
-            if (assignment.score.includes('Missing')) {
+            if (assignment.score && assignment.score.includes('Missing')) {
                 assignment.badges.push("missing");
                 assignment.score = 0;
             }
-            if (assignment.score.includes('Exempt')) {
+            if (assignment.score && assignment.score.includes('Exempt')) {
                 assignment.badges.push("exempt");
                 assignment.score = ""
             }
