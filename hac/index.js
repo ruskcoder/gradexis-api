@@ -392,7 +392,10 @@ app.get('/classes', async (req, res) => {
                 period: "dropped",
             }
         }
-        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop().slice(0, -1);
+        ret[classHeader].average = $(this).find('.sg-header .sg-header-heading.sg-right').text().trim().split(' ').pop();
+        if (ret[classHeader].average.endsWith("%")) {
+            ret[classHeader].average = ret[classHeader].average.slice(0, -1);
+        }
         ret[classHeader].scores = [];
 
         $(this).find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row').each(function () {
