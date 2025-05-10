@@ -118,7 +118,7 @@ async function startSession(req, res, loginDetails, mainpage = false) {
         session.defaults.jar = CookieJar.fromJSON(cookies);
         if (mainpage) {
             const data = await session.get(`${link}guardian/home.html`);
-            if (data.data.includes("Invalid Username or Password!")) {
+            if (data.data.includes("Invalid") || data.data.includes("denied")) {
                 return { link: link, session: { status: 401, message: "Invalid username or password" } };
             }
             response = data.data;
@@ -190,7 +190,6 @@ app.get('/classes', async (req, res) => {
         message: 'Logging In...'
     });
     const { link, session, response } = await startSession(req, res, loginDetails, mainpage = true);
-
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
@@ -216,7 +215,7 @@ app.get('/classes', async (req, res) => {
     Object.keys(validRows).forEach(key => {
         if (validRows[key] === mainTable.find('tr').length - 5) delete validRows[key];
     });
-    const termlist = Object.keys(validRows)
+    const termlist = Object.keys(validRows);
     let currentTerm;
     if (req.query.term) {
         if (!termlist.includes(req.query.term)) {
@@ -367,7 +366,6 @@ app.get('/grades', async (req, res) => {
             let badges = []
             if (!assignment.iscountedinfinalgrade) {
                 badges.push('exempt');
-                console.log("exempt");
             }
             if (score.length > 0) {
                 // if (score[0].isexempt) {
@@ -442,4 +440,15 @@ app.get('/grades', async (req, res) => {
     });
 });
 
-module.exports = app;
+app.get('/schedule', async (req, res) => {
+    const classes = await axios.get('http://localhost:3000/powerschool/classes', {
+        params: { ...req.query },
+    }
+    );
+
+    res.send({
+        schedule: classes,
+        session: classes.session
+    });
+})
+module.exports = app; 
