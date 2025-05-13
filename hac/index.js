@@ -158,7 +158,7 @@ async function loginSession(session, loginData, link, clDistrict = "", res) {
                         headers: { 'Authorization': `Bearer ${token}` }
                     }
                 )).data;
-                link = 'https://' + clapps.find(app => app.name.toLowerCase().includes('hac') || app.name.toLowerCase().includes('home access')).url[0].split('/')['2'] + '/';
+                link = 'https://' + clapps.find(app => app.url.includes("HomeAccess")).url[0].split('/')['2'] + '/';
             }
             res.writejson({
                 percent: 46,
