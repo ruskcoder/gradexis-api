@@ -118,7 +118,7 @@ async function startSession(req, res, loginDetails, mainpage = false) {
         session.defaults.jar = CookieJar.fromJSON(cookies);
         if (mainpage) {
             const data = await session.get(`${link}guardian/home.html`);
-            if (data.data.includes("Invalid") || data.data.includes("denied")) {
+            if (data.data.includes("Invalid Username or Password!") || data.data.includes("Access denied")) {
                 return { link: link, session: { status: 401, message: "Invalid username or password" } };
             }
             response = data.data;
