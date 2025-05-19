@@ -51,7 +51,7 @@ async function loginSession(session, loginData, link, res) {
     let loginUrl = `${link}guardian/home.html`;
     try {
         const data = await session.post(`${loginUrl}`, loginData);
-        if (data.data.includes("Invalid Username or Password!")) {
+        if (data.data.includes("Invalid Username or Password!") || data.data.includes("Access denied")) {
             return { link: link, session: { status: 401, message: "Invalid username or password" } };
         }
         return { link: link, session: session, response: data.data };
