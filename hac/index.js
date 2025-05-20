@@ -9,6 +9,15 @@ const { validate } = require('tough-cookie/dist/validators');
 
 const app = express();
 const port = 4000;
+app.use(express.json());
+
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(err => {
+    if (!res.headersSent) {
+        res.status(502).send({ success: false, message: err.message || "Bad Gateway" });
+    }
+});
+const _get = app.get.bind(app);
+app.get = (path, ...handlers) => _get(path, ...handlers.map(h => asyncHandler(h)));
 
 hac_monthInputs = {
     'january': 0, 'jan': 0, '01': 0, 1: 0,
@@ -23,7 +32,7 @@ hac_monthInputs = {
     'october': 9, 'oct': 9, 10: 9,
     'november': 10, 'nov': 10, 11: 10,
     'december': 11, 'dec': 11, 12: 11,
-}
+};
 hac_monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 hac_loginData = {
     "__RequestVerificationToken": "",
@@ -158,7 +167,7 @@ async function loginSession(session, loginData, link, clDistrict = "", res) {
                         headers: { 'Authorization': `Bearer ${token}` }
                     }
                 )).data;
-                link = 'https://' + clapps.find(app => app.url.includes("HomeAccess")).url[0].split('/')['2'] + '/';
+                link = 'https://' + clapps.find(app => app.url[0].includes("HomeAccess")).url[0].split('/')['2'] + '/';
             }
             res.writejson({
                 percent: 46,
@@ -528,11 +537,11 @@ app.get('/attendance', async (req, res) => {
         return;
     }
     var $ = cheerio.load(attendance.data);
+    if (attendance.data.includes(hac_monthNames[monthIndex])) req.query.date = undefined;
 
     const jan1 = new Date(2000, 0, 1);
     const targetDate = new Date(reqYear, monthIndex, 1);
     const monthCode = Math.floor((targetDate - jan1) / 86400000);
-
     if (req.query.date) {
         // eslint-disable-next-line no-constant-condition
         let maxloops = 15;
@@ -547,18 +556,32 @@ app.get('/attendance', async (req, res) => {
             let prev;
             let nextelem = $('a[title="Go to the next month"]');
             let next;
-
-            if (!prevelem.text() || !nextelem.text()) {
-                const sessionData = session.defaults.jar.toJSON()
-                res.send({
-                    month: hac_monthNames[monthIndex],
-                    year: reqYear,
-                    events: {},
-                    session: sessionData,
-                });
-                return;
+            if (!nextelem.text()) {
+                prev = parseInt(prevelem.attr('href').split('\'')[3].slice(1));
+                if (monthCode > prev) {
+                    const sessionData = session.defaults.jar.toJSON()
+                    res.send({
+                        month: hac_monthNames[monthIndex],
+                        year: reqYear,
+                        events: {},
+                        session: sessionData,
+                    });
+                    return;
+                }
             }
-            else {
+            else if (!prevelem.text()) {
+                next = parseInt(nextelem.attr('href').split('\'')[3].slice(1));
+                if (monthCode < next) {
+                    const sessionData = session.defaults.jar.toJSON()
+                    res.send({
+                        month: hac_monthNames[monthIndex],
+                        year: reqYear,
+                        events: {},
+                        session: sessionData,
+                    });
+                    return;
+                }
+            } else {
                 prev = parseInt(prevelem.attr('href').split('\'')[3].slice(1));
                 next = parseInt(nextelem.attr('href').split('\'')[3].slice(1));
             }
