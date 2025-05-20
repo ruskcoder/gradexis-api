@@ -7,6 +7,14 @@ const { CookieJar, parseDate } = require('tough-cookie');
 
 const app = express();
 
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(err => {
+    if (!res.headersSent) {
+        res.status(502).send({ success: false, message: err.message || "Bad Gateway" });
+    }
+});
+const _get = app.get.bind(app);
+app.get = (path, ...handlers) => _get(path, ...handlers.map(h => asyncHandler(h)));
+
 function swap(json) {
     var ret = {};
     for (var key in json) {
@@ -451,4 +459,21 @@ app.get('/schedule', async (req, res) => {
         session: classes.session
     });
 })
+
+app.get('/attendance', async (req, res) => {
+    const loginDetails = verifyLogin(req, res);
+    if (!loginDetails) return;
+    res = updateRes(res, req);
+
+    const { link, session } = await startSession(req, res, loginDetails, mainpage = false);
+
+    if (typeof session == "object") {
+        res.status(session.status || 401).send({ "success": false, "message": session.message });
+        return;
+    }
+    attendance = (await session.get(`${link}guardian/attendance.html`)).data;
+    
+    res.type('text').send(attendance);
+})
+    
 module.exports = app; 

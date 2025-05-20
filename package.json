@@ -11,7 +11,8 @@
     "express": "^4.21.2",
     "http-cookie-agent": "^7.0.1",
     "nodemon": "^3.1.10",
-    "tough-cookie": "^5.1.2"
+    "tough-cookie": "^5.1.2",
+    "web-push": "^3.6.7"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
