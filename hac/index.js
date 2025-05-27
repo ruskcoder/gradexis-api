@@ -197,7 +197,7 @@ async function loginSession(session, loginData, link, clDistrict = "", res) {
             }
             return { link: link, session: session };
         } catch (e) {
-            return { link: link, session: { status: 500, message: "HAC is broken again" } }
+            return { link: link, session: { status: 500, message: e.toString() } }
         }
     }
     return { link: link, session: session };
