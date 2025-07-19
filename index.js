@@ -15,6 +15,10 @@ app.use('/hac', hac);
 app.use('/demo', demo);
 app.use('/powerschool', powerschool);
 
+app.get('/', (req, res) => {
+  res.send("Gradexis API is running!");
+});
+
 const port = 3000;
 const publicKey = "BMsCbudBN3my0pcAZQhVGd6Z1XwloKFdM5Gwv58geE20j-DUbQYCO4xzUeMZsrXiM4a0CYAqqT0KKkrbB3SlJHM";
 const privateKey = "jAIwVjs74ZqbvePohNwaQZJAhJYilnXJl_SRyYXRW3M";
@@ -32,13 +36,9 @@ app.post('/subscribe', (req, res) => {
   res.status(201).json({ message: 'Subscription received successfully.' });
 });
 
-app.post('/send-notification', (req, res) => {
-  const notificationPayload = req.body.payload;
-
-  // Track URLs to avoid duplicates
+function sendPushToAllDevices() {
+  const notificationPayload = "trigger";
   const sentUrls = new Set();
-
-  // Send notification to unique endpoints only
   const notificationPromises = subscriptions
     .filter(subscription => {
       const endpoint = subscription.endpoint;
@@ -50,16 +50,23 @@ app.post('/send-notification', (req, res) => {
     })
     .map((subscription) =>
       webPush.sendNotification(subscription, notificationPayload)
-        .catch((error) => console.error('Error sending notification:', error))
+        .catch((error) => console.error('Error sending notification'))
     );
+  return Promise.all(notificationPromises);
+}
 
-  Promise.all(notificationPromises)
+app.post('/send-notification', (req, res) => {
+  sendPushToAllDevices()
     .then(() => res.status(200).json({ message: 'Notifications sent successfully.' }))
     .catch((error) => {
-      console.error('Error sending notifications:', error);
       res.status(500).json({ message: 'Failed to send notifications.' });
     });
 });
+
+setInterval(() => {
+  sendPushToAllDevices()
+    .catch(() => console.error('Failed to send push notifications.'));
+}, 30 * 60 * 1000); // Every 30 minutes
 
 app.listen(port, () => {
   console.log(`Main App listening on http://localhost:${port}`);

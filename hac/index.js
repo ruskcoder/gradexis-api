@@ -6,6 +6,8 @@ const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
 const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent/http');
 const { validate } = require('tough-cookie/dist/validators');
+// const fs = require('fs');
+// const path = require('path');
 
 const app = express();
 const port = 4000;
@@ -324,6 +326,22 @@ app.get('/classes', async (req, res) => {
     const loginDetails = verifyLogin(req, res);
     if (!loginDetails) return;
     res = updateRes(res, req);
+
+    // const classesPath = path.resolve(__dirname, '../demo/classes.json');
+    // for (let percent = 0; percent <= 100; percent += 20) {
+    //     res.writejson({
+    //         percent,
+    //         message: `Loading demo data... (${percent}%)`
+    //     });
+    //     await new Promise(resolve => setTimeout(resolve, 1000));
+    // }
+    // if (fs.existsSync(classesPath)) {
+    //     const data = JSON.parse(fs.readFileSync(classesPath, 'utf8'));
+    //     data['term'] = req.query.term || data.term;
+    //     res.send(data);
+    //     return;
+    // }
+    // // TEMPORARY
 
     res.writejson({
         percent: 0,
@@ -773,26 +791,38 @@ app.get('/reportCard', async (req, res) => {
     const $ = cheerio.load(reportCardPage);
 
     const options = $('#plnMain_ddlRCRuns option').toArray().reverse();
+    var reload = true;
+    if (options.length == 0) {
+        reload = false;
+        options.push("")
+    }
     const reports = [];
 
     for (const option of options) {
-        const value = $(option).attr('value');
-        const selectedText = $(option).text().trim();
+        let selectedText, $$;
+        if (reload) {
+            let value = $(option).attr('value');
+            selectedText = $(option).text().trim();
 
-        $('#plnMain_ddlRCRuns').val(value);
+            $('#plnMain_ddlRCRuns').val(value);
 
-        const viewstate = $('input[name="__VIEWSTATE"]').val();
-        const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
-        const data = {
-            __EVENTTARGET: 'ctl00$plnMain$ddlRCRuns',
-            __EVENTARGUMENT: '',
-            __VIEWSTATE: viewstate,
-            __EVENTVALIDATION: eventvalidation,
-            'ctl00$plnMain$ddlRCRuns': value,
-        };
+            const viewstate = $('input[name="__VIEWSTATE"]').val();
+            const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
+            data = {
+                __EVENTTARGET: 'ctl00$plnMain$ddlRCRuns',
+                __EVENTARGUMENT: '',
+                __VIEWSTATE: viewstate,
+                __EVENTVALIDATION: eventvalidation,
+                'ctl00$plnMain$ddlRCRuns': value,
+            };
+            const { data: updatedPage } = await session.post(reportCardUrl, data);
+            $$ = cheerio.load(updatedPage);
 
-        const { data: updatedPage } = await session.post(reportCardUrl, data);
-        const $$ = cheerio.load(updatedPage);
+        } else {
+            selectedText = "1"
+            $$ = $;
+        }
+
 
         let report = [];
         $$('.sg-asp-table-data-row').each(function () {
