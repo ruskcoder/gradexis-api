@@ -60,25 +60,65 @@ app.get('/info', async (req, res) => {
 });
 
 app.get('/classes', async (req, res) => {
+    const classesPath = path.resolve(__dirname, 'classes.json');
+    let fileData = await fs.readFile(classesPath, 'utf8');
+    let data = JSON.parse(fileData);
+    
     if (req.query.stream == "true") {
-        await readAndStream('classes', res);
+        for (let percent = 0; percent < 5; percent += 1) {
+            res.write(JSON.stringify({
+                percent: percent * 20,
+                message: streamMsgs[percent]
+            }) + "\n\n");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        data['term'] = req.query.term || data.term;
+        res.write(JSON.stringify(data));
+        res.end();
+        return;
     }
     else {
-        await readAndSend('classes', res);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        data['term'] = req.query.term || data.term;
+        res.send(data);
     }
 });
 
+const monthLookup = {
+    "January": "01",
+    "February": "02",
+    "March": "03",
+    "April": "04",
+    "May": "05",
+    "June": "06",
+    "July": "07",
+    "August": "08",
+    "September": "09",
+    "October": "10",
+    "November": "11",
+    "December": "12"
+};
+
 app.get('/attendance', async (req, res) => {
+    const classesPath = path.resolve(__dirname, 'attendance.json');
+    let fileData = await fs.readFile(classesPath, 'utf8');
+
+    const now = new Date();
     if (req.query.date) {
-        await readAndSend('attendance', res, modify = function (data) {
-            data.month = capitalizeFirstLetter(req.query.date.split('-')[0]);
-            data.year = req.query.date.split('-')[1];
-            return data;
-        });
+        fileData = fileData.replaceAll('MMM', req.query.date.split('-')[0]);
+        fileData = fileData.replaceAll('YYYY', req.query.date.split('-')[1]);
+        fileData = fileData.replaceAll('MM', monthLookup[req.query.date.split('-')[0]]);
+        fileData = fileData.replaceAll('YY', req.query.date.split('-')[1].slice(-2));
+    } else {
+        fileData = fileData.replaceAll('MMM', Object.entries(monthLookup).find(([name, num]) => num === String(now.getMonth() + 1).padStart(2, '0'))[0]);
+        fileData = fileData.replaceAll('YYYY', String(now.getFullYear()));
+        fileData = fileData.replaceAll('MM', now.getMonth() + 1);
+        fileData = fileData.replaceAll('YY', String(now.getFullYear()).slice(-2));
     }
-    else {
-        await readAndSend('attendance', res);
-    }
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    res.send(JSON.parse(fileData));
 });
 
 module.exports = app;

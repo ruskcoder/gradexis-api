@@ -327,22 +327,6 @@ app.get('/classes', async (req, res) => {
     if (!loginDetails) return;
     res = updateRes(res, req);
 
-    // const classesPath = path.resolve(__dirname, '../demo/classes.json');
-    // for (let percent = 0; percent <= 100; percent += 20) {
-    //     res.writejson({
-    //         percent,
-    //         message: `Loading demo data... (${percent}%)`
-    //     });
-    //     await new Promise(resolve => setTimeout(resolve, 1000));
-    // }
-    // if (fs.existsSync(classesPath)) {
-    //     const data = JSON.parse(fs.readFileSync(classesPath, 'utf8'));
-    //     data['term'] = req.query.term || data.term;
-    //     res.send(data);
-    //     return;
-    // }
-    // // TEMPORARY
-
     res.writejson({
         percent: 0,
         message: 'Logging In...'

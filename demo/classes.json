@@ -1,0 +1,198 @@
+{
+    "scoresIncluded": true,
+    "termList": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+    ],
+    "term": "6",
+    "classes": [
+        {
+            "course": "0001A - 110",
+            "name": "COMPUTER SCIENCE",
+            "period": "1",
+            "teacher": "Smith, John",
+            "room": "2100",
+            "average": "91.50",
+            "scores": [
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "",
+                    "name": "AP Exam Practice",
+                    "category": "Major",
+                    "score": "87.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "87.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "87.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "05/02/2025",
+                    "dateAssigned": "",
+                    "name": "AP Exam Review",
+                    "category": "Major",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/29/2025",
+                    "dateAssigned": "",
+                    "name": "MCQ AP Test",
+                    "category": "Major",
+                    "score": "98.00",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "98.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "98.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/25/2025",
+                    "dateAssigned": "",
+                    "name": "Week 3 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/24/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 4",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/23/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 3",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": ["late"]
+                },
+                {
+                    "dateDue": "04/22/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 2",
+                    "category": "Minor",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": ["absent"]
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "FRQ Minor 1",
+                    "category": "Minor",
+                    "score": "M     - Missing",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "0.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "0.00%",
+                    "badges": [
+                        "missing"
+                    ]
+                },
+                {
+                    "dateDue": "04/17/2025",
+                    "dateAssigned": "",
+                    "name": "Week 2 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                },
+                {
+                    "dateDue": "04/11/2025",
+                    "dateAssigned": "",
+                    "name": "Week 1 Daily",
+                    "category": "Other",
+                    "score": "100.0",
+                    "totalPoints": "100.00",
+                    "weight": "1.00",
+                    "weightedScore": "100.00",
+                    "weightedTotalPoints": "100.0000",
+                    "percentage": "100.00%",
+                    "badges": []
+                }
+            ],
+            "categories": {
+                "Major": {
+                    "studentsPoints": "285.0000",
+                    "maximumPoints": "300.00",
+                    "percent": "95.000%",
+                    "categoryWeight": "70.00",
+                    "categoryPoints": "66.500000"
+                },
+                "Minor": {
+                    "studentsPoints": "300.0000",
+                    "maximumPoints": "400.00",
+                    "percent": "75.000%",
+                    "categoryWeight": "20.00",
+                    "categoryPoints": "15.000000"
+                },
+                "Other": {
+                    "studentsPoints": "300.0000",
+                    "maximumPoints": "300.00",
+                    "percent": "100.000%",
+                    "categoryWeight": "10.00",
+                    "categoryPoints": "10.000000"
+                }
+            }
+        },
+        {
+            "course": "0020B - 210",
+            "name": "STUDY HALL",
+            "period": "2",
+            "teacher": "Doe, Jane",
+            "room": "9CAFE",
+            "average": "",
+            "scores": [],
+            "categories": {}
+        }
+    ],
+    "session": {
+        "version": "tough-cookie@5.0.0",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+    }
+}

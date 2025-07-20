@@ -1,10 +1,14 @@
 {
-    "month": "May",
-    "year": "2025",
+    "month": "MMM",
+    "year": "YYYY",
     "events": {
-        "5/23/25": {
+        "MM/02/YY": {
             "event": "School Closed",
             "color": "#cccccc"
+        },
+        "MM/08/YY": {
+            "event": "Unex Late Arrival/Early Depart",
+            "color": "#ffff00"
         }
     },
     "session": {
