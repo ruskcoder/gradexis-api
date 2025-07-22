@@ -150,32 +150,30 @@ async function loginSession(session, loginData, link, clDistrict = "", res) {
             return { link: link, session: { status: 401, message: clLoginResult.ResultDescription } }
         }
         else {
-            if (!link) {
-                res.writejson({
-                    percent: 34,
-                    message: 'Fetching HAC URL'
-                })
-                let code = (await session.get(clLoginResult['login_url'], {
-                    maxRedirects: 0,
-                    validateStatus: (status) => {
-                        return status >= 200 && status < 400;
-                    }
-                })).headers.location.split('code=')[1].split('&')[0];
-                let token = (await session.get(
-                    `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code
-                `)).data.token
-                let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?',
-                    {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    }
-                )).data;
-                link = 'https://' + clapps.find(app => app.url[0].includes("HomeAccess")).url[0].split('/')['2'] + '/';
-            }
+            res.writejson({
+                percent: 34,
+                message: 'Fetching HAC URL'
+            })
+            let code = (await session.get(clLoginResult['login_url'], {
+                maxRedirects: 0,
+                validateStatus: (status) => {
+                    return status >= 200 && status < 400;
+                }
+            })).headers.location.split('code=')[1].split('&')[0];
+            let token = (await session.get(
+                `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code
+            `)).data.token
+            let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?',
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            )).data;
+            link = clapps.find(app => app.name.toUpperCase().includes("HAC")).url[0];
             res.writejson({
                 percent: 46,
                 message: 'Logging into HAC'
             })
-            await session.get(link + "HomeAccess/District/Student/SSO", {
+            await session.get(link, {
                 headers: {
                     'cookie': cookies,
                 },
