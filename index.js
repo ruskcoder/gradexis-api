@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const webPush = require('web-push');
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
@@ -9,21 +10,25 @@ app.use(express.json());
 const hac = require('./hac/index.js');
 const demo = require('./demo/index.js');
 const powerschool = require('./powerschool/index.js');
+// const classlinkAuth = require('./auth/classlink.js');
 
 app.use(cors());
 app.use('/hac', hac);
 app.use('/demo', demo);
 app.use('/powerschool', powerschool);
+// app.use('/auth/classlink', classlinkAuth);
 
 app.get('/', (req, res) => {
   res.send("Gradexis API is running!");
 });
 
 const port = 3000;
-const publicKey = "BMsCbudBN3my0pcAZQhVGd6Z1XwloKFdM5Gwv58geE20j-DUbQYCO4xzUeMZsrXiM4a0CYAqqT0KKkrbB3SlJHM";
-const privateKey = "jAIwVjs74ZqbvePohNwaQZJAhJYilnXJl_SRyYXRW3M";
+
+const publicKey = "BBXwLd6Bj9NMB8PrS7CoWUMvY345XnMrqlEyjhWF_bEJjbhO465fN0m637BMmcYqtHX0BGPiLzQd33c6tlUDfNI";
+const privateKey = process.env.VAPID_PRIVATE_KEY
+
 webPush.setVapidDetails(
-  'mailto:gradexis.app@gmail.com',
+  'mailto:ruskcoder@gradexis.com',
   publicKey,
   privateKey
 );

@@ -16,6 +16,15 @@ const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next
 const _get = app.get.bind(app);
 app.get = (path, ...handlers) => _get(path, ...handlers.map(h => asyncHandler(h)));
 
+function generateIconIframe(iconData) {
+    const iframeContent = `<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>Icon Selection</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background-color:#f5f5f5}.container{max-width:800px;margin:0 auto;background:white;padding:20px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}h2{text-align:center;color:#333;margin-bottom:30px}.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:15px}.icon-item{display:flex;flex-direction:column;align-items:center;padding:15px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;transition:all 0.3s ease;background:#fafafa}.icon-item:hover{border-color:#007bff;background:#f0f8ff;transform:translateY(-2px)}.icon-item img{width:48px;height:48px;margin-bottom:8px;object-fit:contain}.icon-name{font-size:12px;text-align:center;color:#666;word-break:break-word}</style></head><body><div class='container'><h2>Select an Icon</h2><div class='icon-grid' id='iconGrid'>${iconData.icons.map(icon => `<div class='icon-item' data-icon-id='${icon.id}' data-icon-name='${icon.name}'><img src='https://filescdn.classlink.com/resources/twofactor/${icon.name}' alt='${icon.short_name}' onerror='this.style.display=\"none\"'><div class='icon-name'>${icon.short_name}</div></div>`).join('')}</div></div><script>document.getElementById('iconGrid').addEventListener('click',function(e){const iconItem=e.target.closest('.icon-item');if(!iconItem)return;const selectedIcon={id:parseInt(iconItem.dataset.iconId),name:iconItem.dataset.iconName,short_name:iconItem.querySelector('.icon-name').textContent};window.parent.postMessage({type:'iconSelected',data:selectedIcon},'*');window.parent.postMessage({type:'closeIframe'},'*')});</script></body></html>`;
+
+    const encodedContent = btoa(unescape(encodeURIComponent(iframeContent)));
+    const dataUrl = `data:text/html;base64,${encodedContent}`;
+
+    return dataUrl;
+}
+
 hac_monthInputs = {
     'january': 0, 'jan': 0, '01': 0, 1: 0,
     'february': 1, 'feb': 1, '02': 1, 2: 1,
@@ -115,55 +124,108 @@ function splitClassHeaderAndCourseName(c) {
     return { classHeader, courseName };
 }
 
-async function loginSession(session, loginData, link, district, clsession = "", res) {
-    let username = loginData['LogOnDetails.UserName'];
-    if (clsession) {
+async function loginSession(session, loginData, link, clDistrict = "", clMFA = "", res) {
+    if (clDistrict) {
+        let clLoginData = { ...hac_classlinkLoginData };
+        clLoginData.username = loginData['LogOnDetails.UserName'];
+        clLoginData.password = loginData['LogOnDetails.Password'];
+        clLoginData.code = clDistrict;
+
+        let clSession = await session.get('https://launchpad.classlink.com/' + clDistrict);
+        let csrftoken = clSession.data.split('"csrfToken":"')[1].split('"')[0];
         res.writejson({
-            percent: 34,
-            message: 'Fetching HAC URL'
+            percent: 24,
+            message: 'Logging in to ClassLink'
         })
-        await session.defaults.jar.setCookie(
-            `clsession=${clsession}; Domain=.classlink.com; Path=/`,
-            'https://classlink.com'
-        );
-        let r = await session.get("https://launchpad.classlink.com/");
-        if (r.data.includes('Find your login page')) {
-            return { link: link, session: { status: 401, message: "Invalid Session. Maybe you signed out? Or something else went wrong. Try signing in again." } };
-        }
-        let jsLink = "https://myapps.classlink.com/main" + r.data.split("main")[1].split('"')[0];
-        let js = await session.get(jsLink);
-        let clientId = js.data.split('clientId:"')[1].split('"')[0];
-        let auth1 = await session.get(
-            `https://launchpad.classlink.com/oauth2/v2/auth?scope=full&redirect_uri=https%3A%2F%2Fmyapps.classlink.com%2Foauth%2F&client_id=${clientId}&response_type=code`,
-            { maxRedirects: 0, validateStatus: status => status >= 200 && status < 400 }
-        );
-        let code = auth1.headers.location.split("code=")[1].split("&")[0];
-        let oauth = await session.get(auth1.headers.location);
-        let exchangeCode = await session.get(`https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code`);
-        let token = exchangeCode.data.token || exchangeCode.data.access_token || exchangeCode.data;
-        let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?',
+        let loginResponse = await session.post(
+            'https://launchpad.classlink.com/login',
+            clLoginData,
             {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'csrf-token': csrftoken,
+                }
             }
-        )).data;
-        hacLink = clapps.find(app => app.name.toUpperCase().includes("HAC")).url[0];
-        res.writejson({
-            percent: 46,
-            message: 'Logging into HAC'
-        })
-        await session.get(hacLink);
-        const urlObj = new URL(hacLink);
-        link = urlObj.origin + '/';
-        username = exchangeCode.data.user.loginId;
-        
-        if (exchangeCode.data.user.tenantName.includes("Conroe ISD")) {
-            const gwsToken = hacLink.split("GWSToken=")[1];
-            await session.get(hacLink);
-            await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=isapps.conroeisd.net&p=443&s=513&l=802&gwsToken=${gwsToken}`);
-            await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=paclite.conroeisd.net&p=443&s=514&l=803&gwsToken=${gwsToken}`);
-            await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=cisdnet.conroeisd.net&p=443&s=517&l=806&gwsToken=${gwsToken}`);
-            await session.get('https://hac.conroeisd.net/HomeAccess/District/Student/ConroeISD');
-            link = 'https://hac.conroeisd.net/';
+        );
+
+        let clLoginResult = loginResponse.data
+        if (clLoginResult.ResultCode == 0) {
+            return { link: link, session: { status: 401, message: clLoginResult.ResultDescription } }
+        }
+        else {
+            if (clDistrict == "conroeisd") {
+                let r2 = await session.get(
+                    `https://launchpad.classlink.com/login/twoformauth/${clLoginResult['token']}`,
+                )
+                let icons = await session.get(
+                    `https://launchpad.classlink.com/proxies/api/twofactors?token=${clLoginResult['token']}`,
+                );
+                if (!clMFA) {
+                    return { link: link, session: { status: 401, message: generateIconIframe(icons.data) } };
+                }
+                else {
+                    let r4 = await session.post(
+                        `https://launchpad.classlink.com/login/twoformauth/${clLoginResult['token']}`,
+                        { "bresolution": "1680x1050", "image1": clMFA },
+                        {
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded' } }
+                    )
+
+                    clLoginResult['login_url'] = r4.data.split("redirect:\"")[1].split('"')[0];
+                }
+            }
+
+            res.writejson({
+                percent: 34,
+                message: 'Fetching HAC URL'
+            })
+
+            let code = (await session.get(clLoginResult['login_url'], {
+                maxRedirects: 0,
+                validateStatus: (status) => {
+                    return status >= 200 && status < 400;
+                }
+            })).headers.location.split('code=')[1].split('&')[0];
+            let token = (await session.get(
+                `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code
+            `)).data.token
+            let clapps = (await session.get('https://applications.apis.classlink.com/v1/v3/applications?',
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            )).data;
+            await session.get('https://myapps.apis.classlink.com/v1/pageLoad?', 
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            )
+            await session.post('https://myapps.apis.classlink.com/v1/sessions/start?', {}, 
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            link = clapps.find(app => app.name.toUpperCase().includes("HAC")).url[0];
+            res.writejson({
+                percent: 46,
+                message: 'Logging into HAC'
+            })
+            await session.get(link);
+
+            if (clDistrict == "conroeisd") {
+                // Run conroeISD specific login
+                let gws = link.split('&GWSToken=')[1]
+                let link1 = `https://cl-revp-25.conroeisd.net/authenticate?v=isapps.conroeisd.net&p=443&s=513&l=802&gwsToken=${gws}`
+                let link2 = `https://cl-revp-25.conroeisd.net/authenticate?v=paclite.conroeisd.net&p=443&s=514&l=803&gwsToken=${gws}`
+                let link3 = `https://cl-revp-25.conroeisd.net/authenticate?v=cisdnet.conroeisd.net&p=443&s=517&l=806&gwsToken=${gws}`
+                let haclink = "https://hac.conroeisd.net/HomeAccess/District/Student/ConroeISD"
+                let hacStart = 'https://hac.conroeisd.net/HomeAccess/Account/SetEnvironment?actionDetails=SessionStart'
+
+                await session.get(link1);
+                await session.get(link2);
+                await session.get(link3);
+                await session.get(haclink);
+                let hacSession = await session.get(hacStart);
+            }
         }
     }
     else {
@@ -175,21 +237,6 @@ async function loginSession(session, loginData, link, district, clsession = "", 
         const { data: loginResponse } = await session.get(loginUrl);
         const loginCheerio = cheerio.load(loginResponse);
         loginData["__RequestVerificationToken"] = loginCheerio("input[name='__RequestVerificationToken']").val();
-        if (district) {
-            const select = loginCheerio('select.valid');
-            let found = false;
-            select.find('option').each(function () {
-                const optionText = loginCheerio(this).text().toLowerCase();
-                if (optionText.includes(district.toLowerCase())) {
-                    loginData.Database = loginCheerio(this).attr('value');
-                    found = true;
-                    return false; // break loop
-                }
-            });
-            if (!found) {
-                return { link: link, session: { status: 401, message: "District not Found" } };
-            }
-        }
         try {
             const data = await session.post(loginUrl, loginData);
             if (data.data.includes("incorrect") || data.data.includes("invalid")) {
@@ -200,7 +247,7 @@ async function loginSession(session, loginData, link, district, clsession = "", 
             return { link: link, session: { status: 500, message: e.toString() } }
         }
     }
-    return { link: link, session: session, username: username };
+    return { link: link, session: session };
 }
 
 function formatLink(link) {
@@ -214,7 +261,7 @@ function formatLink(link) {
 }
 
 function verifyLogin(req, res) {
-    if (((!req.query.username || !req.query.password) && !req.query.clsession) || !(req.query.clsession || req.query.link)) {
+    if (!req.query.username || !req.query.password || !(req.query.classlink || req.query.link)) {
         res.status(400).send({ "success": false, "message": `Missing one or more required parameters` });
         return false;
     } else {
@@ -238,9 +285,9 @@ async function startSession(req, res, loginDetails) {
             link = formatLink(cookies.cookies.find(cookie => cookie.key === '.AuthCookie').domain);
         }
     } else {
-        ({ link, session, username } = await loginSession(session, userLoginData, link, req.query.district, req.query.clsession, res));
+        ({ link, session } = await loginSession(session, userLoginData, link, req.query.classlink, req.query.classlinkmfa, res));
     }
-    return { link: link, session: session, username: username };
+    return { link: link, session: session };
 }
 
 function updateRes(res, req) {
@@ -285,7 +332,8 @@ app.get('/info', async (req, res) => {
     if (!loginDetails) return;
     res = updateRes(res, req);
 
-    const { link, session, username } = await startSession(req, res, loginDetails);
+    const { link, session } = await startSession(req, res, loginDetails);
+
 
     if (typeof session == "object") {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
@@ -312,7 +360,6 @@ app.get('/info', async (req, res) => {
     }
     const sessionData = session.defaults.jar.toJSON()
     res.send({
-        username: username,
         ...ret,
         link: link,
         session: sessionData,

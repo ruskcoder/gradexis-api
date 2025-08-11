@@ -4,4 +4,6 @@ __pycache__/
 .idea/
 .DS_Store
 .env
+test*
+cl*
 classes-old.json
