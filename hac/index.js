@@ -117,6 +117,7 @@ function splitClassHeaderAndCourseName(c) {
 
 async function loginSession(session, loginData, link, district, clsession = "", res) {
     let username = loginData['LogOnDetails.UserName'];
+    let hacSplash = ""
     if (clsession) {
         res.writejson({
             percent: 34,
@@ -151,7 +152,8 @@ async function loginSession(session, loginData, link, district, clsession = "", 
             percent: 46,
             message: 'Logging into HAC'
         })
-        await session.get(hacLink);
+        let hac = await session.get(hacLink);
+        hacSplash = hac.data;
         const urlObj = new URL(hacLink);
         link = urlObj.origin + '/';
         username = exchangeCode.data.user.loginId;
@@ -162,7 +164,8 @@ async function loginSession(session, loginData, link, district, clsession = "", 
             await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=isapps.conroeisd.net&p=443&s=513&l=802&gwsToken=${gwsToken}`);
             await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=paclite.conroeisd.net&p=443&s=514&l=803&gwsToken=${gwsToken}`);
             await session.get(`https://cl-revp-25.conroeisd.net/authenticate?v=cisdnet.conroeisd.net&p=443&s=517&l=806&gwsToken=${gwsToken}`);
-            await session.get('https://hac.conroeisd.net/HomeAccess/District/Student/ConroeISD');
+            let hac = await session.get('https://hac.conroeisd.net/HomeAccess/District/Student/ConroeISD');
+            hacSplash = hac.data;
             link = 'https://hac.conroeisd.net/';
         }
     }
@@ -195,11 +198,12 @@ async function loginSession(session, loginData, link, district, clsession = "", 
             if (data.data.includes("incorrect") || data.data.includes("invalid")) {
                 return { link: link, session: { status: 401, message: "Invalid username or password" } };
             }
-            return { link: link, session: session };
+            hacSplash = data.data;
         } catch (e) {
             return { link: link, session: { status: 500, message: e.toString() } }
         }
     }
+    session.hacData = hacSplash
     return { link: link, session: session, username: username };
 }
 
@@ -291,12 +295,14 @@ app.get('/info', async (req, res) => {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return
     }
+    const $$ = cheerio.load(session.hacData);
     const registration = await session.get(link + "HomeAccess/Content/Student/Registration.aspx");
     if (registration.data.includes("Welcome to")) {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
     const $ = cheerio.load(registration.data);
+
     let ret = {};
     if ($("span#plnMain_lblRegStudentName").length) {
         ret["name"] = $("span#plnMain_lblRegStudentName").text().trim();
@@ -306,6 +312,7 @@ app.get('/info', async (req, res) => {
         ret["counselor"] = $("span#plnMain_lblCounselor").text().trim();
         ret["language"] = $("span#plnMain_lblLanguage").text().trim();
         ret["cohort-year"] = $("span#plnMain_lblCohortYear").text().trim();
+        ret["district"] = $$("span.sg-banner-text").text().trim();
     }
     if (ret["name"] == process.env.MYNAME) {
         ret["name"] = "Test User";
