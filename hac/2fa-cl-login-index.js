@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -25,7 +24,7 @@ function generateIconIframe(iconData) {
     return dataUrl;
 }
 
-hac_monthInputs = {
+let hac_monthInputs = {
     'january': 0, 'jan': 0, '01': 0, 1: 0,
     'february': 1, 'feb': 1, '02': 1, 2: 1,
     'march': 2, 'mar': 2, '03': 2, 3: 2,
@@ -39,8 +38,8 @@ hac_monthInputs = {
     'november': 10, 'nov': 10, 11: 10,
     'december': 11, 'dec': 11, 12: 11,
 };
-hac_monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-hac_loginData = {
+let hac_monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+let hac_loginData = {
     "__RequestVerificationToken": "",
     "SCKTY00328510CustomEnabled": true,
     "SCKTY00436568CustomEnabled": true,
@@ -51,7 +50,7 @@ hac_loginData = {
     "tempPW": "",
     "LogOnDetails.Password": "",
 }
-hac_classlinkLoginData = {
+let hac_classlinkLoginData = {
     username: '',
     password: '',
     os: 'Windows',
@@ -60,14 +59,14 @@ hac_classlinkLoginData = {
     Browser: 'Chrome',
     Resolution: '1920x1080'
 };
-hac_termData = {
+let hac_termData = {
     "__EVENTTARGET": "ctl00$plnMain$btnRefreshView",
     "__EVENTARGUMENT": "",
     "__LASTFOCUS": "",
     "__VIEWSTATEGENERATOR": "B0093F3C",
     "ctl00$plnMain$ddlReportCardRuns": "",
 }
-hac_monthData = {
+let hac_monthData = {
     "__EVENTTARGET": "ctl00$plnMain$cldAttendance",
     "__EVENTARGUMENT": "",
     "__VIEWSTATE": "",
@@ -88,7 +87,7 @@ hac_monthData = {
     "ctl00$plnMain$hdnHyperlinkText_exist": "(Alerts Are Limited. Click to View List of Selected Choices.)",
     "ctl00$plnMain$hdnHyperlinkText_Noexist": "(Limit Alerts to Specific Types of Attendance)",
 }
-hac_monthHeaders = {
+let hac_monthHeaders = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Accept-Language": "en-US,en;q=0.9",
     "Cache-Control": "max-age=0",
@@ -837,7 +836,7 @@ app.get('/reportCard', async (req, res) => {
 
             const viewstate = $('input[name="__VIEWSTATE"]').val();
             const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
-            data = {
+            let data = {
                 __EVENTTARGET: 'ctl00$plnMain$ddlRCRuns',
                 __EVENTARGUMENT: '',
                 __VIEWSTATE: viewstate,

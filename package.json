@@ -9,6 +9,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
     "http-cookie-agent": "^7.0.1",
     "nodemon": "^3.1.10",
     "tough-cookie": "^5.1.2",
@@ -23,5 +25,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@eslint/json": "^0.13.1",
+    "eslint": "^9.34.0",
+    "globals": "^16.3.0"
+  }
 }

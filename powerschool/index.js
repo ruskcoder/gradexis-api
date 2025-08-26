@@ -1,9 +1,8 @@
-/* eslint-disable no-undef */
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { wrapper } = require('axios-cookiejar-support');
-const { CookieJar, parseDate } = require('tough-cookie');
+const { CookieJar } = require('tough-cookie');
 
 const app = express();
 
@@ -23,7 +22,7 @@ function swap(json) {
     return ret;
 }
 
-ps_loginData = {
+let ps_loginData = {
     dbpw: "",
     translator_username: "",
     translator_password: "",
@@ -39,7 +38,7 @@ ps_loginData = {
     pw: "",
     translatorpw: "",
 }
-ps_classHeaders = {
+let ps_classHeaders = {
     accept: "application/json, text/plain, */*",
     "accept-encoding": "gzip, deflate, br, zstd",
     "accept-language": "en-US,en;q=0.9",
@@ -64,7 +63,7 @@ async function loginSession(session, loginData, link, res) {
         }
         return { link: link, session: session, response: data.data };
     } catch (e) {
-        return { link: link, session: { status: 500, message: "PowerSchool returned an error" } }
+        return { link: link, session: { status: 500, message: "PowerSchool returned an error: " + e.message } }
     }
 }
 
@@ -120,7 +119,7 @@ async function startSession(req, res, loginDetails, mainpage = false) {
     userLoginData.ldappassword = password;
 
     let session = createSession();
-
+    let response;
     if (req.query.session) {
         const cookies = JSON.parse(req.query.session);
         session.defaults.jar = CookieJar.fromJSON(cookies);
@@ -367,8 +366,8 @@ app.get('/grades', async (req, res) => {
             res.status(400).send({ "success": false, "message": `An error occurred. Please try again. ` });
             return;
         }
-        for (a in data) {
-            assignment = data[a]['_assignmentsections'][0];
+        for (let a in data) {
+            let assignment = data[a]['_assignmentsections'][0];
             let duedate = assignment.duedate.split('-');
             let score = assignment['_assignmentscores']
             let badges = []
@@ -471,8 +470,8 @@ app.get('/attendance', async (req, res) => {
         res.status(session.status || 401).send({ "success": false, "message": session.message });
         return;
     }
-    attendance = (await session.get(`${link}guardian/attendance.html`)).data;
-    
+    let attendance = (await session.get(`${link}guardian/attendance.html`)).data;
+
     res.type('text').send(attendance);
 })
     
