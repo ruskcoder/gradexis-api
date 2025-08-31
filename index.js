@@ -136,7 +136,7 @@ app.get('/send-test-push', async (req, res) => {
 setInterval(() => {
   sendPushToAllDevices()
     .catch(() => console.error('Failed to send push notifications.'));
-}, 10000);
+}, 1000 * 60 * 30); // Every 30 minutes
 
 app.listen(port, () => {
   console.log(`Main App listening on http://localhost:${port}`);
