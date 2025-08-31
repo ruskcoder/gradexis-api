@@ -7,3 +7,4 @@ __pycache__/
 test*
 cl*.txt
 classes-old.json
+firebase-service-account.json

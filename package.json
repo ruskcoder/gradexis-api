@@ -10,6 +10,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^8.0.1",
+    "firebase-admin": "^13.5.0",
     "helmet": "^8.1.0",
     "http-cookie-agent": "^7.0.1",
     "nodemon": "^3.1.10",
@@ -21,6 +22,11 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "live": "nodemon index.js"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "*.json"
+    ]
   },
   "keywords": [],
   "author": "",
