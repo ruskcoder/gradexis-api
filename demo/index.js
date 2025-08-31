@@ -59,6 +59,12 @@ app.get('/info', async (req, res) => {
     await readAndSend('info', res);
 });
 
+let compSciAvg = "91.50";
+app.get('/setAvg', async (req, res) => {
+    compSciAvg = req.query.new || "91.50";
+    res.send({ message: 'Average set successfully', average: compSciAvg });
+});
+
 app.get('/classes', async (req, res) => {
     const classesPath = path.resolve(__dirname, 'classes.json');
     let fileData = await fs.readFile(classesPath, 'utf8');
@@ -74,6 +80,7 @@ app.get('/classes', async (req, res) => {
         }
         
         data['term'] = req.query.term || data.term;
+        data['classes'][0]['average'] = compSciAvg;
         res.write(JSON.stringify(data));
         res.end();
         return;
@@ -81,6 +88,7 @@ app.get('/classes', async (req, res) => {
     else {
         await new Promise(resolve => setTimeout(resolve, 3000));
         data['term'] = req.query.term || data.term;
+        data['classes'][0]['average'] = compSciAvg;
         res.send(data);
     }
 });
