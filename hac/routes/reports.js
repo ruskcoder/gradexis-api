@@ -16,7 +16,15 @@ const router = express.Router();
 
 router.get('/ipr', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
-    const { link, session } = await authenticateUser(req, progressTracker);
+    
+    const authResult = await authenticateUser(req, progressTracker);
+    
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session } = authResult;
 
     const progressReportUrl = link + HAC_ENDPOINTS.INTERIM_PROGRESS;
     const { data: progressReportPage } = await session.get(progressReportUrl);
@@ -31,7 +39,15 @@ router.get('/ipr', asyncHandler(async (req, res) => {
 
 router.get('/reportCard', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
-    const { link, session } = await authenticateUser(req, progressTracker);
+    
+    const authResult = await authenticateUser(req, progressTracker);
+    
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session } = authResult;
 
     const reportCardUrl = link + HAC_ENDPOINTS.REPORT_CARDS;
     const { data: reportCardPage } = await session.get(reportCardUrl);
@@ -46,7 +62,15 @@ router.get('/reportCard', asyncHandler(async (req, res) => {
 
 router.get('/transcript', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
-    const { link, session } = await authenticateUser(req, progressTracker);
+    
+    const authResult = await authenticateUser(req, progressTracker);
+    
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session } = authResult;
 
     const transcriptUrl = link + HAC_ENDPOINTS.TRANSCRIPT;
     const { data: transcriptPage } = await session.get(transcriptUrl);

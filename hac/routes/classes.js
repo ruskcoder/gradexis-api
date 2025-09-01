@@ -19,7 +19,13 @@ router.get('/classes', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
 
     progressTracker.update(0, 'Logging In...');
-    const { link, session } = await authenticateUser(req, progressTracker);
+    const authResult = await authenticateUser(req, progressTracker);
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session } = authResult;
 
     const { assignmentsPage, schedulePage } = await fetchClassesData(session, link, req.query.term, progressTracker);
 

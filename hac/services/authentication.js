@@ -75,16 +75,32 @@ async function authenticateWithCredentials(session, username, password, link, di
 
 async function authenticateWithClassLink(session, clsession, progressTracker) {
     try {
-        progressTracker.update(34, 'Fetching HAC URL');
+        progressTracker.update(25, 'Fetching HAC URL');
 
-        const { link: hacLink, session: loggedInSession, exchangeCode } = await loginClassLink(session, clsession, "hac");
+        const loginResult = await loginClassLink(session, clsession, ["hac", "homeaccess", "home access"]);
+        
+        // Check if loginClassLink returned an error response
+        if (loginResult && loginResult.session && loginResult.session.status === 401) {
+            if (progressTracker.streaming) {
+                progressTracker.error(401, loginResult.session.message);
+                return; // Don't throw, just return
+            }
+            throw new AuthenticationError(loginResult.session.message);
+        }
+        
+        const { link: hacLink, session: loggedInSession, exchangeCode } = loginResult;
 
-        if (!hacLink) {
+        if (!hacLink || !loginResult) {
+            // If streaming, send error response immediately
+            if (progressTracker.streaming) {
+                progressTracker.error(401, "ClassLink authentication failed");
+                return; // Don't throw, just return
+            }
             throw new AuthenticationError("ClassLink authentication failed");
         }
 
         session = loggedInSession;
-        progressTracker.update(46, 'Logging into HAC');
+        progressTracker.update(30, 'Logging into HAC');
 
         const hacResponse = await session.get(hacLink);
         const urlObj = new URL(hacLink);
@@ -109,6 +125,24 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
         return { session, username, link };
 
     } catch (error) {
+        // Handle streaming errors
+        if (progressTracker.streaming) {
+            let errorMessage = "ClassLink authentication failed";
+            let statusCode = 401;
+            
+            if (error instanceof AuthenticationError) {
+                errorMessage = error.message;
+                statusCode = error.status || 401;
+            } else {
+                errorMessage = `ClassLink authentication failed: ${error.message}`;
+                statusCode = 500;
+            }
+            
+            progressTracker.error(statusCode, errorMessage);
+            return; // Don't throw, just return
+        }
+        
+        // Non-streaming error handling
         if (error instanceof AuthenticationError) {
             throw error;
         }
@@ -142,6 +176,12 @@ async function authenticateUser(req, progressTracker) {
     // Authenticate based on method
     if (req.query.clsession) {
         const result = await authenticateWithClassLink(session, req.query.clsession, progressTracker);
+        
+        // If result is undefined, it means an error was handled in streaming mode
+        if (!result) {
+            return;
+        }
+        
         return {
             session: result.session,
             link: result.link,

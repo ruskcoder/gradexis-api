@@ -23,7 +23,9 @@ async function loginClassLink(session, clsession, search) {
             headers: { 'Authorization': `Bearer ${token}` }
         }
     )).data;
-    let returnLink = clapps.find(app => app.name.toLowerCase().includes(search.toLowerCase())).url[0];
+    let returnLink = clapps.find(app =>
+        search.some(term => app.name.toLowerCase().includes(term.toLowerCase()))
+    ).url[0];
     return { link: returnLink, session: session, exchangeCode: exchangeCode };
 }
 module.exports = { loginClassLink };

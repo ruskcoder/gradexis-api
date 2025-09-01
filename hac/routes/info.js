@@ -12,7 +12,13 @@ const router = express.Router();
 router.get('/info', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
 
-    const { link, session, username } = await authenticateUser(req, progressTracker);
+    const authResult = await authenticateUser(req, progressTracker);
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session, username } = authResult;
 
     // Get splash page data and registration data
     const $$ = cheerio.load(session.hacData);

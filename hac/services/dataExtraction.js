@@ -15,7 +15,7 @@ async function fetchClassesData(session, link, term, progressTracker) {
 
     // Handle term switching if requested
     if (term) {
-        progressTracker.update(70, 'Going to term');
+        progressTracker.update(65, 'Going to term');
 
         const viewstate = $('input[name="__VIEWSTATE"]').val();
         const eventvalidation = $('input[name="__EVENTVALIDATION"]').val();
@@ -29,7 +29,7 @@ async function fetchClassesData(session, link, term, progressTracker) {
         $ = cheerio.load(termResponse.data);
     }
 
-    progressTracker.update(83, 'Crunching data');
+    progressTracker.update(80, 'Organizing data');
 
     // Get schedule data
     const scheduleResponse = await session.get(link + HAC_ENDPOINTS.CLASSES);

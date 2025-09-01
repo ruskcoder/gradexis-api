@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
 const { loginClassLink } = require('../auth/classlink');
-
+let process;
 const app = express();
 app.use(express.json());
 

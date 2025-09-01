@@ -18,6 +18,15 @@ class ProgressTracker {
             this.res.json(data);
         }
     }
+
+    error(statusCode, message) {
+        const errorResponse = { success: false, message };
+        if (this.streaming) {
+            this.res.status(statusCode).end(JSON.stringify(errorResponse));
+        } else {
+            this.res.status(statusCode).json(errorResponse);
+        }
+    }
 }
 
 module.exports = ProgressTracker;

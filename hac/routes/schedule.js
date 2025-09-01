@@ -10,7 +10,14 @@ const router = express.Router();
 
 router.get('/schedule', asyncHandler(async (req, res) => {
     const progressTracker = new ProgressTracker(res, req.query.stream === "true");
-    const { link, session } = await authenticateUser(req, progressTracker);
+    
+    const authResult = await authenticateUser(req, progressTracker);
+
+    if (!authResult) {
+        return;
+    }
+    
+    const { link, session } = authResult;
 
     const scheduleResponse = await session.get(link + HAC_ENDPOINTS.CLASSES);
     checkSessionValidity(scheduleResponse);
