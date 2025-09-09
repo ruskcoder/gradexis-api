@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 const { ERROR_MESSAGES } = require('../config/constants');
 const { ValidationError } = require('../middleware/errors');
 

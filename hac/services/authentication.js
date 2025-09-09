@@ -18,7 +18,7 @@ function checkSessionValidity(response) {
     }
 }
 
-async function authenticateWithCredentials(session, username, password, link, district) {
+async function authenticateWithCredentials(session, username, password, link, district, progressTracker) {
     // Handle test credentials
     if (isTestCredentials(username, password)) {
         const prodCreds = getProductionCredentials();
@@ -50,6 +50,10 @@ async function authenticateWithCredentials(session, username, password, link, di
             });
 
             if (!found) {
+                if (progressTracker && progressTracker.streaming) {
+                    progressTracker.error(401, ERROR_MESSAGES.DISTRICT_NOT_FOUND);
+                    return; // Don't throw, just return
+                }
                 throw new AuthenticationError(ERROR_MESSAGES.DISTRICT_NOT_FOUND);
             }
         }
@@ -59,6 +63,10 @@ async function authenticateWithCredentials(session, username, password, link, di
 
         if (loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS) ||
             loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS_ALT)) {
+            if (progressTracker && progressTracker.streaming) {
+                progressTracker.error(401, ERROR_MESSAGES.INVALID_USERNAME_PASSWORD);
+                return; // Don't throw, just return
+            }
             throw new AuthenticationError(ERROR_MESSAGES.INVALID_USERNAME_PASSWORD);
         }
 
@@ -66,6 +74,24 @@ async function authenticateWithCredentials(session, username, password, link, di
         return { session, username };
 
     } catch (error) {
+        // Handle streaming errors
+        if (progressTracker && progressTracker.streaming) {
+            let errorMessage = "Login failed";
+            let statusCode = 401;
+            
+            if (error instanceof AuthenticationError) {
+                errorMessage = error.message;
+                statusCode = error.status || 401;
+            } else {
+                errorMessage = `Login failed: ${error.message}`;
+                statusCode = 500;
+            }
+            
+            progressTracker.error(statusCode, errorMessage);
+            return; // Don't throw, just return
+        }
+        
+        // Non-streaming error handling
         if (error instanceof AuthenticationError) {
             throw error;
         }
@@ -188,7 +214,13 @@ async function authenticateUser(req, progressTracker) {
             username: result.username
         };
     } else {
-        const result = await authenticateWithCredentials(session, username, password, link, req.query.district);
+        const result = await authenticateWithCredentials(session, username, password, link, req.query.district, progressTracker);
+        
+        // If result is undefined, it means an error was handled in streaming mode
+        if (!result) {
+            return;
+        }
+        
         return {
             session: result.session,
             link,
