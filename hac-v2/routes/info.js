@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 const express = require('express');
 const cheerio = require('cheerio');
 const { asyncHandler } = require('../../errorHandler');
@@ -9,8 +8,9 @@ const { HAC_ENDPOINTS } = require('../config/constants');
 
 const router = express.Router();
 
-router.get('/info', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/info', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
 
     const authResult = await authenticateUser(req, progressTracker);
 
@@ -19,8 +19,8 @@ router.get('/info', asyncHandler(async (req, res) => {
     }
     
     const { link, session, username } = authResult;
+    progressTracker.update(50, 'Fetching student info');
 
-    // Get splash page data and registration data
     const $$ = cheerio.load(session.hacData);
     const registration = await session.get(link + HAC_ENDPOINTS.REGISTRATION);
     checkSessionValidity(registration);
@@ -29,7 +29,6 @@ router.get('/info', asyncHandler(async (req, res) => {
 
     let studentInfo = {};
 
-    // Extract student information
     if ($("span#plnMain_lblRegStudentName").length) {
         studentInfo = {
             name: $("span#plnMain_lblRegStudentName").text().trim(),
@@ -42,7 +41,6 @@ router.get('/info', asyncHandler(async (req, res) => {
             district: $$("span.sg-banner-text").text().trim(),
         };
 
-        // Anonymize test user data
         if (studentInfo.name === process.env.MYNAME) {
             studentInfo.name = "Test User";
         }
@@ -58,3 +56,4 @@ router.get('/info', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+

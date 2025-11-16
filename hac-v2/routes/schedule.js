@@ -8,8 +8,9 @@ const { HAC_ENDPOINTS } = require('../config/constants');
 
 const router = express.Router();
 
-router.get('/schedule', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/schedule', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
     
     const authResult = await authenticateUser(req, progressTracker);
 
@@ -18,19 +19,18 @@ router.get('/schedule', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
+    progressTracker.update(50, 'Fetching schedule');
 
     const scheduleResponse = await session.get(link + HAC_ENDPOINTS.CLASSES);
     checkSessionValidity(scheduleResponse);
 
     const $ = cheerio.load(scheduleResponse.data);
 
-    // Extract column headers
     const columns = [];
     $('.sg-asp-table-header-row').children().each(function () {
         columns.push($(this).text().trim());
     });
 
-    // Extract schedule data
     const schedule = [];
     $('.sg-asp-table-data-row').each(function () {
         const row = {};
@@ -45,3 +45,4 @@ router.get('/schedule', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+

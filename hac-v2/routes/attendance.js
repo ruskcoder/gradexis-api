@@ -14,8 +14,9 @@ const {
 
 const router = express.Router();
 
-router.get('/attendance', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/attendance', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
     
     const authResult = await authenticateUser(req, progressTracker);
     
@@ -25,10 +26,11 @@ router.get('/attendance', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
+    progressTracker.update(50, 'Fetching attendance');
 
     let dateInfo = null;
-    if (req.query.date) {
-        dateInfo = processAttendanceDate(req.query.date);
+    if (req.body?.options?.date) {
+        dateInfo = processAttendanceDate(req.body.options.date);
     }
 
     const attendanceResponse = await session.get(link + HAC_ENDPOINTS.ATTENDANCE);
@@ -50,3 +52,4 @@ router.get('/attendance', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+

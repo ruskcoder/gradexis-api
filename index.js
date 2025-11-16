@@ -17,21 +17,35 @@ try {
 }
 
 const app = express();
+
 app.use(express.json());
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid JSON: ' + err.message 
+    });
+  }
+  next(err);
+});
+
 const hac = require('./hac/index.js');
+const hacv2 = require('./hac-v2/index.js');
 const demo = require('./demo/index.js');
 const powerschool = require('./powerschool/index.js');
 // const classlinkAuth = require('./auth/classlink.js');
 
 app.use(cors());
 app.use('/hac', hac);
+app.use('/v2/hac', hacv2);
 app.use('/demo', demo);
 app.use('/powerschool', powerschool);
 // app.use('/auth/classlink', classlinkAuth);
 
+app.use('/static', express.static(__dirname + '/static'));
 app.get('/', (req, res) => {
-  res.send("Gradexis API is running!");
+  res.sendFile(__dirname + '/index.html');
 });
 
 // Endpoint to get the appropriate public key for web push
@@ -137,6 +151,20 @@ setInterval(() => {
   sendPushToAllDevices()
     .catch(() => console.error('Failed to send push notifications.'));
 }, 1000 * 60 * 30); // Every 30 minutes
+
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  
+  if (!res.headersSent) {
+    res.status(status).json({ 
+      success: false, 
+      message 
+    });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Main App listening on http://localhost:${port}`);

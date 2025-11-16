@@ -3,8 +3,9 @@ const { asyncHandler } = require('../../errorHandler');
 
 const router = express.Router();
 
-router.get('/', asyncHandler(async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
     res.json({ message: "HAC API", success: true });
 }));
 
 module.exports = router;
+

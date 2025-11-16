@@ -14,8 +14,9 @@ const {
 
 const router = express.Router();
 
-router.get('/ipr', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/ipr', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
     
     const authResult = await authenticateUser(req, progressTracker);
     
@@ -25,6 +26,7 @@ router.get('/ipr', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
+    progressTracker.update(50, 'Fetching progress reports');
 
     const progressReportUrl = link + HAC_ENDPOINTS.INTERIM_PROGRESS;
     const { data: progressReportPage } = await session.get(progressReportUrl);
@@ -37,8 +39,9 @@ router.get('/ipr', asyncHandler(async (req, res) => {
     progressTracker.complete(response);
 }));
 
-router.get('/reportCard', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/reportCard', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
     
     const authResult = await authenticateUser(req, progressTracker);
     
@@ -48,8 +51,7 @@ router.get('/reportCard', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
-
-    const reportCardUrl = link + HAC_ENDPOINTS.REPORT_CARDS;
+    progressTracker.update(50, 'Fetching report cards');
     const { data: reportCardPage } = await session.get(reportCardUrl);
     checkSessionValidity({ data: reportCardPage });
 
@@ -60,8 +62,9 @@ router.get('/reportCard', asyncHandler(async (req, res) => {
     progressTracker.complete(response);
 }));
 
-router.get('/transcript', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/transcript', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
     
     const authResult = await authenticateUser(req, progressTracker);
     
@@ -71,8 +74,7 @@ router.get('/transcript', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
-
-    const transcriptUrl = link + HAC_ENDPOINTS.TRANSCRIPT;
+    progressTracker.update(50, 'Fetching transcript');
     const { data: transcriptPage } = await session.get(transcriptUrl);
     checkSessionValidity({ data: transcriptPage });
 
@@ -83,8 +85,9 @@ router.get('/transcript', asyncHandler(async (req, res) => {
     progressTracker.complete(response);
 }));
 
-router.get('/bellSchedule', asyncHandler(async () => {
+router.post('/bellSchedule', asyncHandler(async () => {
     throw new APIError(ERROR_MESSAGES.BELL_SCHEDULE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 }));
 
 module.exports = router;
+

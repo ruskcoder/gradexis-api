@@ -1,4 +1,4 @@
-async function loginClassLink(session, clsession, search) { 
+async function loginClassLink(session, clsession, search, progressTracker = null) { 
     await session.defaults.jar.setCookie(
         `clsession=${clsession}; Domain=.classlink.com; Path=/`,
         'https://classlink.com'
@@ -23,6 +23,9 @@ async function loginClassLink(session, clsession, search) {
             headers: { 'Authorization': `Bearer ${token}` }
         }
     )).data;
+    if (progressTracker) { 
+        progressTracker.update(25, 'Fetching URL through ClassLink');
+    }
     let returnLink = clapps.find(app =>
         search.some(term => app.name.toLowerCase().includes(term.toLowerCase()))
     ).url[0];

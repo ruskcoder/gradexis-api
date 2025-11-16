@@ -7,8 +7,9 @@ const { HAC_ENDPOINTS } = require('../config/constants');
 
 const router = express.Router();
 
-router.get('/login', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.query.stream === "true");
+router.post('/login', asyncHandler(async (req, res) => {
+    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    progressTracker.update(0, 'Authenticating');
 
     const authResult = await authenticateUser(req, progressTracker);
 
@@ -17,8 +18,8 @@ router.get('/login', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
+    progressTracker.update(50, 'Verifying session');
 
-    // Verify session is valid by checking registration page
     const registration = await session.get(link + HAC_ENDPOINTS.REGISTRATION);
     checkSessionValidity(registration);
 
@@ -27,3 +28,4 @@ router.get('/login', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+
