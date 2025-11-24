@@ -120,6 +120,10 @@ function extractAssignmentData(assignmentsPage, scheduleData) {
                 assignment.badges.push("exempt");
                 assignment.score = "";
             }
+            if (assignment.name.endsWith(' *')) {
+                assignment.badges.push("dropped");
+                assignment.name = assignment.name.slice(0, -2).trim();
+            }
 
             assignment.score = parseFloat(assignment.score) || assignment.score;
             scheduleData[classHeader].scores.push(assignment);
