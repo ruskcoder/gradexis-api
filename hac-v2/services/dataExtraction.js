@@ -232,17 +232,17 @@ function extractAttendanceData($) {
             const formattedDate = `${month}/${dateParts[0]}/${dateParts[2].slice(-2)}`;
 
             if ($(this).attr('title')) {
-                events[formattedDate] = {
+                events[formattedDate] = [{
                     event: $(this).attr('title').split('\n')[1],
                     color: $(this).attr('bgcolor').toLowerCase()
-                };
+                }];
             } else if ($(this).attr('style')) {
                 const color = $(this).attr('style').substring(17).split(';')[0].toLowerCase();
                 if (colorKey[color]) {
-                    events[formattedDate] = {
+                    events[formattedDate] = [{
                         event: colorKey[color],
                         color: color
-                    };
+                    }];
                 }
             }
         }
