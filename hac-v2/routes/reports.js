@@ -51,6 +51,8 @@ router.post('/reportCard', asyncHandler(async (req, res) => {
     }
     
     const { link, session } = authResult;
+
+    const reportCardUrl = link + HAC_ENDPOINTS.REPORT_CARDS;
     progressTracker.update(50, 'Fetching report cards');
     const { data: reportCardPage } = await session.get(reportCardUrl);
     checkSessionValidity({ data: reportCardPage });
@@ -75,6 +77,8 @@ router.post('/transcript', asyncHandler(async (req, res) => {
     
     const { link, session } = authResult;
     progressTracker.update(50, 'Fetching transcript');
+
+    const transcriptUrl = link + HAC_ENDPOINTS.TRANSCRIPT;
     const { data: transcriptPage } = await session.get(transcriptUrl);
     checkSessionValidity({ data: transcriptPage });
 
