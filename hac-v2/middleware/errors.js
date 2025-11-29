@@ -1,4 +1,4 @@
-const { HTTP_STATUS } = require('../config/constants');
+import { HTTP_STATUS } from '../config/constants.js';
 
 class APIError extends Error {
     constructor(message, status = HTTP_STATUS.INTERNAL_SERVER_ERROR) {
@@ -22,7 +22,7 @@ class ValidationError extends APIError {
     }
 }
 
-module.exports = {
+export {
     APIError,
     AuthenticationError,
     ValidationError

@@ -1,8 +1,8 @@
-const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
-const { wrapper } = require('axios-cookiejar-support');
-const { CookieJar } = require('tough-cookie');
+import express from 'express';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
 
 const app = express();
 
@@ -475,4 +475,4 @@ app.get('/attendance', async (req, res) => {
     res.type('text').send(attendance);
 })
     
-module.exports = app; 
+export default app; 

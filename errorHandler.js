@@ -12,7 +12,7 @@ const asyncHandler = fn => (req, res, next) => {
     });
 };
 
-module.exports = {
+export {
     sendError,
     asyncHandler
 };

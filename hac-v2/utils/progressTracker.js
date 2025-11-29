@@ -29,5 +29,5 @@ class ProgressTracker {
     }
 }
 
-module.exports = ProgressTracker;
+export default ProgressTracker;
 

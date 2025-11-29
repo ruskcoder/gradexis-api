@@ -1,6 +1,6 @@
  
-const { ERROR_MESSAGES } = require('../config/constants');
-const { ValidationError } = require('../middleware/errors');
+import { ERROR_MESSAGES } from '../config/constants.js';
+import { ValidationError } from '../middleware/errors.js';
 
 function splitClassHeaderAndCourseName(classText) {
     const parts = classText.split(' ');
@@ -129,7 +129,7 @@ function createMonthData(viewState = '', eventValidation = '', eventArgument = '
     };
 }
 
-module.exports = {
+export {
     splitClassHeaderAndCourseName,
     formatLink,
     validateLoginParameters,

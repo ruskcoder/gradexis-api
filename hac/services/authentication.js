@@ -1,16 +1,16 @@
-const cheerio = require('cheerio');
-const { CookieJar } = require('tough-cookie');
-const { loginClassLink } = require('../../auth/classlink');
-const { HAC_ENDPOINTS, ERROR_MESSAGES } = require('../config/constants');
-const { AuthenticationError, ValidationError, APIError } = require('../middleware/errors');
-const { createSession } = require('../utils/session');
-const { 
+import * as cheerio from 'cheerio';
+import { CookieJar } from 'tough-cookie';
+import { loginClassLink } from '../../auth/classlink.js';
+import { HAC_ENDPOINTS, ERROR_MESSAGES } from '../config/constants.js';
+import { AuthenticationError, ValidationError, APIError } from '../middleware/errors.js';
+import { createSession } from '../utils/session.js';
+import { 
     validateLoginParameters, 
     isTestCredentials, 
     getProductionCredentials, 
     createLoginData,
     formatLink
-} = require('../utils/validation');
+} from '../utils/validation.js';
 
 function checkSessionValidity(response) {
     if (response.data.includes(ERROR_MESSAGES.INVALID_SESSION)) {
@@ -229,7 +229,7 @@ async function authenticateUser(req, progressTracker) {
     }
 }
 
-module.exports = {
+export {
     authenticateUser,
     checkSessionValidity
 };

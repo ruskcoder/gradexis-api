@@ -1,11 +1,19 @@
-/* eslint-disable no-undef */
-const express = require('express');
-const cors = require('cors');
-const admin = require('firebase-admin');
-require('dotenv').config();
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import express from 'express';
+import cors from 'cors';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 try {
-  const serviceAccount = require('./firebase-service-account.json');
+  const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, 'firebase-service-account.json'), 'utf-8'));
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
@@ -28,11 +36,11 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-const webPushService = require('./web-push.js');
-const hac = require('./hac/index.js');
-const hacv2 = require('./hac-v2/index.js');
-const demo = require('./demo/index.js');
-const powerschool = require('./powerschool/index.js');
+import * as webPushService from './web-push.js';
+import hac from './hac/index.js';
+import hacv2 from './hac-v2/index.js';
+import demo from './demo/index.js';
+import powerschool from './powerschool/index.js';
 
 app.use(cors());
 app.use('/hac', hac);
@@ -91,4 +99,4 @@ app.listen(port, () => {
   console.log(`Main App listening on http://localhost:${port}`);
 });
 
-module.exports = app; 
+export default app; 

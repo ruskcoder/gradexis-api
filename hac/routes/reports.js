@@ -1,16 +1,16 @@
-const express = require('express');
-const cheerio = require('cheerio');
-const { asyncHandler } = require('../../errorHandler');
-const { authenticateUser, checkSessionValidity } = require('../services/authentication');
-const { createSuccessResponse } = require('../utils/session');
-const ProgressTracker = require('../utils/progressTracker');
-const { HAC_ENDPOINTS, ERROR_MESSAGES, HTTP_STATUS } = require('../config/constants');
-const { APIError } = require('../middleware/errors');
-const {
+import express from 'express';
+import * as cheerio from 'cheerio';
+import { asyncHandler } from '../../errorHandler.js';
+import { authenticateUser, checkSessionValidity } from '../services/authentication.js';
+import { createSuccessResponse } from '../utils/session.js';
+import ProgressTracker from '../utils/progressTracker.js';
+import { HAC_ENDPOINTS, ERROR_MESSAGES, HTTP_STATUS } from '../config/constants.js';
+import { APIError } from '../middleware/errors.js';
+import {
     extractProgressReports,
     extractReportCards,
     extractTranscriptData
-} = require('../services/dataExtraction');
+} from '../services/dataExtraction.js';
 
 const router = express.Router();
 
@@ -87,4 +87,4 @@ router.get('/bellSchedule', asyncHandler(async () => {
     throw new APIError(ERROR_MESSAGES.BELL_SCHEDULE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 }));
 
-module.exports = router;
+export default router;

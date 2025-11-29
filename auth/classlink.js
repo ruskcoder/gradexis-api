@@ -31,4 +31,4 @@ async function loginClassLink(session, clsession, search, progressTracker = null
     ).url[0];
     return { link: returnLink, session: session, exchangeCode: exchangeCode };
 }
-module.exports = { loginClassLink };
+export { loginClassLink };

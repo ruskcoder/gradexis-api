@@ -8,11 +8,14 @@ export default defineConfig([
     files: ["**/*.{js,mjs,cjs}"],
     plugins: { js },
     extends: ["js/recommended"],
-    languageOptions: { globals: globals.browser },
+    languageOptions: { 
+      globals: globals.browser,
+      sourceType: "module",
+      ecmaVersion: "latest"
+    },
     rules: {
       "no-unused-vars": "off",
     },
   },
-  { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
   { files: ["**/*.json"], plugins: { json }, language: "json/json", extends: ["json/recommended"] },
 ]);

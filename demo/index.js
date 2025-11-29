@@ -1,7 +1,10 @@
-/* eslint-disable no-undef */
-const express = require('express');
-const fs = require('fs').promises; // Use promises API
-const path = require('path');
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs/promises';
+import express from 'express';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 5000;
@@ -129,4 +132,4 @@ app.get('/attendance', async (req, res) => {
     res.send(JSON.parse(fileData));
 });
 
-module.exports = app;
+export default app;

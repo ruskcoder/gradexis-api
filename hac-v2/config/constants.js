@@ -47,7 +47,7 @@ const MONTH_INPUTS = {
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-module.exports = {
+export {
     HTTP_STATUS,
     ERROR_MESSAGES,
     HAC_ENDPOINTS,

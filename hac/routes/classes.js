@@ -1,17 +1,17 @@
-const express = require('express');
-const axios = require('axios');
-const { asyncHandler } = require('../../errorHandler');
-const { authenticateUser } = require('../services/authentication');
-const { createSuccessResponse } = require('../utils/session');
-const ProgressTracker = require('../utils/progressTracker');
-const { ValidationError } = require('../middleware/errors');
-const {
+import express from 'express';
+import axios from 'axios';
+import { asyncHandler } from '../../errorHandler.js';
+import { authenticateUser } from '../services/authentication.js';
+import { createSuccessResponse } from '../utils/session.js';
+import ProgressTracker from '../utils/progressTracker.js';
+import { ValidationError } from '../middleware/errors.js';
+import {
     fetchClassesData,
     extractClassList,
     extractTermInfo,
     extractScheduleData,
     extractAssignmentData
-} = require('../services/dataExtraction');
+} from '../services/dataExtraction.js';
 
 const router = express.Router();
 
@@ -72,4 +72,4 @@ router.get('/grades', asyncHandler(async (req, res) => {
     res.json(response);
 }));
 
-module.exports = router;
+export default router;

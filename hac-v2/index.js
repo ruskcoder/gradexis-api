@@ -1,14 +1,14 @@
-const express = require('express');
-const { asyncHandler } = require('../errorHandler');
+import express from 'express';
+import { asyncHandler } from '../errorHandler.js';
 
-const homeRoutes = require('./routes/home');
-const loginRoutes = require('./routes/login');
-const infoRoutes = require('./routes/info');
-const classesRoutes = require('./routes/classes');
-const scheduleRoutes = require('./routes/schedule');
-const attendanceRoutes = require('./routes/attendance');
-const teachersRoutes = require('./routes/teachers');
-const reportsRoutes = require('./routes/reports');
+import homeRoutes from './routes/home.js';
+import loginRoutes from './routes/login.js';
+import infoRoutes from './routes/info.js';
+import classesRoutes from './routes/classes.js';
+import scheduleRoutes from './routes/schedule.js';
+import attendanceRoutes from './routes/attendance.js';
+import teachersRoutes from './routes/teachers.js';
+import reportsRoutes from './routes/reports.js';
 
 const app = express();
 
@@ -24,4 +24,4 @@ app.use('/', attendanceRoutes);
 app.use('/', teachersRoutes);
 app.use('/', reportsRoutes);
 
-module.exports = app;
+export default app;

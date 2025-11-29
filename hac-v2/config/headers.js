@@ -15,7 +15,7 @@ const DEFAULT_HEADERS = {
     "sec-ch-ua-platform": '"Windows"',
 };
 
-module.exports = {
+export {
     DEFAULT_HEADERS
 };
 

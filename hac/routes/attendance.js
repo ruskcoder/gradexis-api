@@ -1,16 +1,16 @@
-const express = require('express');
-const cheerio = require('cheerio');
-const { asyncHandler } = require('../../errorHandler');
-const { authenticateUser, checkSessionValidity } = require('../services/authentication');
-const { createSuccessResponse } = require('../utils/session');
-const ProgressTracker = require('../utils/progressTracker');
-const { HAC_ENDPOINTS, MONTH_NAMES } = require('../config/constants');
-const {
+import express from 'express';
+import * as cheerio from 'cheerio';
+import { asyncHandler } from '../../errorHandler.js';
+import { authenticateUser, checkSessionValidity } from '../services/authentication.js';
+import { createSuccessResponse } from '../utils/session.js';
+import ProgressTracker from '../utils/progressTracker.js';
+import { HAC_ENDPOINTS, MONTH_NAMES } from '../config/constants.js';
+import {
     processAttendanceDate,
     calculateMonthCode,
     navigateToMonth,
     extractAttendanceData
-} = require('../services/dataExtraction');
+} from '../services/dataExtraction.js';
 
 const router = express.Router();
 
@@ -49,4 +49,4 @@ router.get('/attendance', asyncHandler(async (req, res) => {
     progressTracker.complete(response);
 }));
 
-module.exports = router;
+export default router;

@@ -1,8 +1,8 @@
-const cheerio = require('cheerio');
-const { HAC_ENDPOINTS, ERROR_MESSAGES, MONTH_INPUTS, MONTH_NAMES } = require('../config/constants');
-const { ValidationError } = require('../middleware/errors');
-const { createTermData, createMonthData, splitClassHeaderAndCourseName } = require('../utils/validation');
-const { checkSessionValidity } = require('./authentication');
+import * as cheerio from 'cheerio';
+import { HAC_ENDPOINTS, ERROR_MESSAGES, MONTH_INPUTS, MONTH_NAMES } from '../config/constants.js';
+import { ValidationError } from '../middleware/errors.js';
+import { createTermData, createMonthData, splitClassHeaderAndCourseName } from '../utils/validation.js';
+import { checkSessionValidity } from './authentication.js';
 
 // Data extraction functions for classes
 async function fetchClassesData(session, link, term, progressTracker) {
@@ -489,7 +489,7 @@ function extractTranscriptData($) {
     return transcript;
 }
 
-module.exports = {
+export {
     fetchClassesData,
     extractClassList,
     extractTermInfo,

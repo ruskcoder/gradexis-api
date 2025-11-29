@@ -38,5 +38,6 @@
     "@eslint/json": "^0.13.1",
     "eslint": "^9.34.0",
     "globals": "^16.3.0"
-  }
+  },
+  "type": "module"
 }

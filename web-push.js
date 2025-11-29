@@ -1,16 +1,16 @@
 /* eslint-disable no-undef */
-const webPush = require('web-push');
-const admin = require('firebase-admin');
+import webPush from 'web-push';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
 
-// VAPID Keys for web push notifications
+dotenv.config();
+
 const webPublicKey = "BBXwLd6Bj9NMB8PrS7CoWUMvY345XnMrqlEyjhWF_bEJjbhO465fN0m637BMmcYqtHX0BGPiLzQd33c6tlUDfNI";
 const webPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-// Firebase Web Push Certificate (for unified Firebase experience)
 const firebasePublicKey = process.env.FIREBASE_PUBLIC_KEY;
 const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-// Set default VAPID details for web push
 webPush.setVapidDetails(
   'mailto:ruskcoder@gradexis.com',
   webPublicKey,
@@ -107,7 +107,7 @@ function getVapidPublicKey(platform) {
   return webPublicKey;
 }
 
-module.exports = {
+export {
   addSubscription,
   getSubscriptions,
   sendPushToAllDevices,

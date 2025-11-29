@@ -1,6 +1,6 @@
-const axios = require('axios');
-const { wrapper } = require('axios-cookiejar-support');
-const { CookieJar } = require('tough-cookie');
+import axios from 'axios';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
 
 function createSession() {
     const jar = new CookieJar();
@@ -22,7 +22,7 @@ function createSuccessResponse(data, session = null) {
     return response;
 }
 
-module.exports = {
+export {
     createSession,
     createSuccessResponse
 };
