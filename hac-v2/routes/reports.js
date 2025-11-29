@@ -89,9 +89,5 @@ router.post('/transcript', asyncHandler(async (req, res) => {
     progressTracker.complete(response);
 }));
 
-router.post('/bellSchedule', asyncHandler(async () => {
-    throw new APIError(ERROR_MESSAGES.BELL_SCHEDULE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-}));
-
 module.exports = router;
 

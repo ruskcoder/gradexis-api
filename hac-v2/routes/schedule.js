@@ -4,7 +4,8 @@ const { asyncHandler } = require('../../errorHandler');
 const { authenticateUser, checkSessionValidity } = require('../services/authentication');
 const { createSuccessResponse } = require('../utils/session');
 const ProgressTracker = require('../utils/progressTracker');
-const { HAC_ENDPOINTS } = require('../config/constants');
+const { HAC_ENDPOINTS, ERROR_MESSAGES, HTTP_STATUS } = require('../config/constants');
+const { APIError } = require('../middleware/errors');
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ router.post('/schedule', asyncHandler(async (req, res) => {
 
     const response = createSuccessResponse({ schedule }, session);
     progressTracker.complete(response);
+}));
+
+router.post('/bellSchedule', asyncHandler(async () => {
+    throw new APIError(ERROR_MESSAGES.BELL_SCHEDULE_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
 }));
 
 module.exports = router;
