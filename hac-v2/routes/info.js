@@ -48,7 +48,7 @@ router.post('/info', asyncHandler(async (req, res) => {
         }
     }
     const referredFrom = req.body.options.referralCode;
-    const ref = await addUser(username, referredFrom);
+    const ref = await addUser(username.toLowerCase(), referredFrom);
     if (ref.success === false) {
         progressTracker.error(409, ref.message);
         return;

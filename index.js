@@ -56,7 +56,8 @@ app.get('/', (req, res) => {
 
 app.get('/referral-code', async (req, res) => {
   try {
-    const { username } = req.query;
+    let { username } = req.query;
+    username = username.toLowerCase();
     const referralCode = await getReferralCode(username);
     res.json({ referralCode });
   } catch (error) {
@@ -66,7 +67,8 @@ app.get('/referral-code', async (req, res) => {
 
 app.get('/referral-status', async (req, res) => {
   try {
-    const { username } = req.query;
+    let { username } = req.query;
+    username = username.toLowerCase();
     const numberOfReferrals = await getNumberOfReferrals(username);
     res.json({ numberOfReferrals });
   } catch (error) {
