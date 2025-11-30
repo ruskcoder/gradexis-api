@@ -37,6 +37,7 @@ app.use((err, req, res, next) => {
 });
 
 import * as webPushService from './web-push.js';
+import { getReferralCode, getNumberOfReferrals } from './referrals.js';
 import hac from './hac/index.js';
 import hacv2 from './hac-v2/index.js';
 import demo from './demo/index.js';
@@ -51,6 +52,26 @@ app.use('/powerschool', powerschool);
 app.use('/static', express.static(__dirname + '/static'));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
+});
+
+app.get('/referral-code', async (req, res) => {
+  try {
+    const { username } = req.query;
+    const referralCode = await getReferralCode(username);
+    res.json({ referralCode });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/referral-status', async (req, res) => {
+  try {
+    const { username } = req.query;
+    const numberOfReferrals = await getNumberOfReferrals(username);
+    res.json({ numberOfReferrals });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/vapid-public-key', (req, res) => {

@@ -1,7 +1,7 @@
-/* eslint-disable no-undef */
 import webPush from 'web-push';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
+import process from 'process';
 
 dotenv.config();
 

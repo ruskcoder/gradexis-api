@@ -1,3 +1,4 @@
+import process from 'process';
 import express from 'express';
 import * as cheerio from 'cheerio';
 import { asyncHandler } from '../../errorHandler.js';
@@ -5,6 +6,7 @@ import { authenticateUser, checkSessionValidity } from '../services/authenticati
 import { createSuccessResponse } from '../utils/session.js';
 import ProgressTracker from '../utils/progressTracker.js';
 import { HAC_ENDPOINTS } from '../config/constants.js';
+import { addUser } from '../../referrals.js';
 
 const router = express.Router();
 
@@ -45,10 +47,16 @@ router.post('/info', asyncHandler(async (req, res) => {
             studentInfo.name = "Test User";
         }
     }
-
+    const referredFrom = req.body.options.referralCode;
+    const ref = await addUser(username, referredFrom);
+    if (ref.success === false) {
+        progressTracker.error(409, ref.message);
+        return;
+    }
     const response = createSuccessResponse({
         username,
         link,
+        referralCode: ref.referralCode,
         ...studentInfo
     }, session);
 
@@ -56,4 +64,3 @@ router.post('/info', asyncHandler(async (req, res) => {
 }));
 
 export default router;
-

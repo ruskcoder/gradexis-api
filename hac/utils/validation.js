@@ -1,4 +1,4 @@
- 
+import process from 'process';
 import { ERROR_MESSAGES } from '../config/constants.js';
 import { ValidationError } from '../middleware/errors.js';
 

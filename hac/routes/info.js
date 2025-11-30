@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+import process from 'process';
 import express from 'express';
 import * as cheerio from 'cheerio';
 import { asyncHandler } from '../../errorHandler.js';
