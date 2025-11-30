@@ -29,7 +29,7 @@ async function referralCodeExists(code) {
     return count > 0;
 }
 
-async function addUser(username, referredFrom = null) {
+async function addUser(username, referredFrom = null, name = null) {
     if (referredFrom) referredFrom = referredFrom.toUpperCase();
     if (await userExists(username)) {
         if (referredFrom) {
@@ -46,7 +46,7 @@ async function addUser(username, referredFrom = null) {
     const userCode = generateCode();
     const { error } = await supabase
         .from('referrals')
-        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0 }]);
+        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0, name }]);
     
     
     if (referredFrom) {
