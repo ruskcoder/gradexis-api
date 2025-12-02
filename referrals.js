@@ -29,33 +29,49 @@ async function referralCodeExists(code) {
     return count > 0;
 }
 
-async function addUser(username, referredFrom = null, name = null) {
+async function addUser(username, referredFrom = null, name = null, school = null) {
     if (referredFrom) referredFrom = referredFrom.toUpperCase();
+
     if (await userExists(username)) {
         if (referredFrom) {
             return {success: false, message: 'Referral codes must be blank for existing users' };
         }
+
+        const updateFields = {};
+        if (name) updateFields.name = name;
+        if (school) updateFields.school = school;
+
+        if (Object.keys(updateFields).length > 0) {
+            const { error: updateError } = await supabase
+                .from('referrals')
+                .update(updateFields)
+                .eq('username', username);
+            if (updateError) console.error('Failed to update existing user fields:', updateError);
+        }
+
         const refCode = await getReferralCode(username);
         return {success: true, referralCode: refCode};
     }
-    
+
     if (referredFrom && !await referralCodeExists(referredFrom)) {
         return {success: false, message: 'Invalid referral code'};
     }
-    
+
     const userCode = generateCode();
     const { error } = await supabase
         .from('referrals')
-        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0, name }]);
-    
-    
+        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0, name, school }]);
+
+    if (error) throw error;
+
+    // Increment referrer's numReferrals if applicable
     if (referredFrom) {
         const { error: updateError } = await supabase
             .rpc('update_referral_count', { code: referredFrom });
-        
+
         if (updateError) console.error('Failed to update referrer count:', updateError);
     }
-    
+
     return {success: true, referralCode: userCode};
 }
 
