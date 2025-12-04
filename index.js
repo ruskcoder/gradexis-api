@@ -38,6 +38,7 @@ app.use((err, req, res, next) => {
 
 import * as webPushService from './web-push.js';
 import { getReferralCode, getNumberOfReferrals } from './referrals.js';
+import supabase from './database.js';
 import hac from './hac/index.js';
 import hacv2 from './hac-v2/index.js';
 import demo from './demo/index.js';
@@ -54,7 +55,6 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-// Combined endpoint: returns both the referral code and referral count
 app.get('/referral', async (req, res) => {
   try {
     let { username } = req.query;
@@ -76,6 +76,23 @@ app.get('/vapid-public-key', (req, res) => {
   const { platform } = req.query;
   const publicKey = webPushService.getVapidPublicKey(platform);
   res.json({ publicKey });
+});
+
+app.get('/web-notifications', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({ data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/subscribe', (req, res) => {
