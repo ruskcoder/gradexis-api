@@ -29,7 +29,7 @@ async function referralCodeExists(code) {
     return count > 0;
 }
 
-async function addUser(username, referredFrom = null, name = null, school = null) {
+async function addUser(username, name, school, referredFrom = null) {
     if (referredFrom) referredFrom = referredFrom.toUpperCase();
 
     if (await userExists(username)) {

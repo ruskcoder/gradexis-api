@@ -11,7 +11,7 @@ import { addUser } from '../../referrals.js';
 const router = express.Router();
 
 router.post('/info', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
+    const progressTracker = new ProgressTracker(res, req.body.stream === true);
     progressTracker.update(0, 'Authenticating');
 
     const authResult = await authenticateUser(req, progressTracker);
@@ -47,8 +47,8 @@ router.post('/info', asyncHandler(async (req, res) => {
             studentInfo.name = "Test User";
         }
     }
-    const referredFrom = req.body.options.referralCode;
-    const ref = await addUser(username.toLowerCase(), referredFrom, studentInfo.name, studentInfo.school);
+    const referredFrom = req.body.options?.referralCode;
+    const ref = await addUser(username.toLowerCase(), studentInfo.name, studentInfo.school, referredFrom);
     if (ref.success === false) {
         progressTracker.error(409, ref.message);
         return;
