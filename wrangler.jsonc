@@ -1,0 +1,22 @@
+{
+  "name": "gradexis-api",
+  "main": "index.js",
+  "compatibility_date": "2025-12-03",
+  "type": "javascript",
+  "workers_dev": true,
+
+  "build": {
+    "command": "npm install",
+    "upload": {
+      "format": "service-worker"
+    }
+  },
+
+  "env": {
+    "production": {
+      "workers_dev": false,
+      "route": "",
+      "account_id": ""
+    }
+  }
+}
