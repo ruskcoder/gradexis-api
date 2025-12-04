@@ -64,7 +64,6 @@ async function addUser(username, name, school, referredFrom = null) {
 
     if (error) throw error;
 
-    // Increment referrer's numReferrals if applicable
     if (referredFrom) {
         const { error: updateError } = await supabase
             .rpc('update_referral_count', { code: referredFrom });

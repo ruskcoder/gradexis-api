@@ -54,23 +54,19 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-app.get('/referral-code', async (req, res) => {
+// Combined endpoint: returns both the referral code and referral count
+app.get('/referral', async (req, res) => {
   try {
     let { username } = req.query;
+    if (!username) return res.status(400).json({ error: 'username is required' });
     username = username.toLowerCase();
-    const referralCode = await getReferralCode(username);
-    res.json({ referralCode });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
-app.get('/referral-status', async (req, res) => {
-  try {
-    let { username } = req.query;
-    username = username.toLowerCase();
-    const numberOfReferrals = await getNumberOfReferrals(username);
-    res.json({ numberOfReferrals });
+    const [referralCode, numberOfReferrals] = await Promise.all([
+      getReferralCode(username),
+      getNumberOfReferrals(username),
+    ]);
+
+    res.json({ referralCode, numberOfReferrals });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
