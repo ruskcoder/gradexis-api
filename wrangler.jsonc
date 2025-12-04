@@ -2,6 +2,7 @@
   "name": "gradexis-api",
   "main": "index.js",
   "compatibility_date": "2025-12-03",
+  "compatibility_flags": ["nodejs_compat"],
   "type": "javascript",
   "workers_dev": true,
 
