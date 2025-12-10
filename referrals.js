@@ -49,8 +49,14 @@ async function addUser(username, name, school, referredFrom = null) {
             if (updateError) console.error('Failed to update existing user fields:', updateError);
         }
 
-        const refCode = await getReferralCode(username);
-        return {success: true, referralCode: refCode};
+        const { data, error } = await supabase
+            .from('referrals')
+            .select('referralCode, numReferrals')
+            .eq('username', username)
+            .single();
+        
+        if (error) throw error;
+        return {success: true, referralCode: data.referralCode, numReferrals: data.numReferrals};
     }
 
     if (referredFrom && !await referralCodeExists(referredFrom)) {
@@ -71,7 +77,7 @@ async function addUser(username, name, school, referredFrom = null) {
         if (updateError) console.error('Failed to update referrer count:', updateError);
     }
 
-    return {success: true, referralCode: userCode};
+    return {success: true, referralCode: userCode, numReferrals: 0};
 }
 
 async function getNumberOfReferrals(username) { 

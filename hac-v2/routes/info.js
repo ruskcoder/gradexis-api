@@ -57,6 +57,7 @@ router.post('/info', asyncHandler(async (req, res) => {
         username,
         link,
         referralCode: ref.referralCode,
+        numReferrals: ref.numReferrals,
         ...studentInfo
     }, session);
 
