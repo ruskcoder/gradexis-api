@@ -25,7 +25,6 @@ router.post('/classes', asyncHandler(async (req, res) => {
     }
 
     const { link, session } = authResult;
-    progressTracker.update(50, 'Fetching classes');
 
     const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
     const courses = extractClassList(assignmentsPage);

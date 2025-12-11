@@ -49,7 +49,7 @@ async function authenticateWithCredentials(session, username, password, link, di
       if (!found) {
         if (progressTracker && progressTracker.streaming) {
           progressTracker.error(401, ERROR_MESSAGES.DISTRICT_NOT_FOUND);
-          return; // Don't throw, just return
+          return; 
         }
         throw new AuthenticationError(ERROR_MESSAGES.DISTRICT_NOT_FOUND);
       }
@@ -61,7 +61,7 @@ async function authenticateWithCredentials(session, username, password, link, di
       loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS_ALT)) {
       if (progressTracker && progressTracker.streaming) {
         progressTracker.error(401, ERROR_MESSAGES.INVALID_USERNAME_PASSWORD);
-        return; // Don't throw, just return
+        return; 
       }
       throw new AuthenticationError(ERROR_MESSAGES.INVALID_USERNAME_PASSWORD);
     }
@@ -84,7 +84,7 @@ async function authenticateWithCredentials(session, username, password, link, di
       }
 
       progressTracker.error(statusCode, errorMessage);
-      return; // Don't throw, just return
+      return; 
     }
 
     if (error instanceof AuthenticationError) {
@@ -103,7 +103,7 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
     if (loginResult && loginResult.session && loginResult.session.status === 401) {
       if (progressTracker && progressTracker.streaming) {
         progressTracker.error(401, loginResult.session.message);
-        return; // Don't throw, just return
+        return; 
       }
       throw new AuthenticationError(loginResult.session.message);
     }
@@ -114,7 +114,7 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
 
       if (progressTracker && progressTracker.streaming) {
         progressTracker.error(401, "ClassLink authentication failed");
-        return; // Don't throw, just return
+        return; 
       }
       throw new AuthenticationError("ClassLink authentication failed");
     }
@@ -158,7 +158,7 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
       }
 
       progressTracker.error(statusCode, errorMessage);
-      return; // Don't throw, just return
+      return; 
     }
 
     if (error instanceof AuthenticationError) {
@@ -194,7 +194,7 @@ async function authenticateUser(req, progressTracker) {
 
   let session = createSession();
 
-  if (existingSession) {
+  if (existingSession && Object.keys(existingSession).length > 0) {
     try {
       session = restoreCookiesIntoSession(session, existingSession);
 
