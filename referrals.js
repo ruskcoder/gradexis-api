@@ -71,10 +71,22 @@ async function addUser(username, name, school, referredFrom = null) {
     if (error) throw error;
 
     if (referredFrom) {
-        const { error: updateError } = await supabase
-            .rpc('update_referral_count', { code: referredFrom });
+        const { data: referrerData, error: fetchError } = await supabase
+            .from('referrals')
+            .select('numReferrals')
+            .eq('referralCode', referredFrom)
+            .single();
 
-        if (updateError) console.error('Failed to update referrer count:', updateError);
+        if (!fetchError && referrerData) {
+            const { error: updateError } = await supabase
+                .from('referrals')
+                .update({ numReferrals: referrerData.numReferrals + 1 })
+                .eq('referralCode', referredFrom);
+
+            if (updateError) console.error('Failed to update referrer count:', updateError);
+        } else {
+            console.error('Failed to fetch referrer data:', fetchError);
+        }
     }
 
     return {success: true, referralCode: userCode, numReferrals: 0};
