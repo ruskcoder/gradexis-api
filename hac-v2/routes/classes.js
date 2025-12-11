@@ -23,12 +23,11 @@ router.post('/classes', asyncHandler(async (req, res) => {
     if (!authResult) {
         return;
     }
-    
+
     const { link, session } = authResult;
     progressTracker.update(50, 'Fetching classes');
 
-    const { assignmentsPage, schedulePage } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
-
+    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
     const courses = extractClassList(assignmentsPage);
     const { term, termList } = extractTermInfo(assignmentsPage);
 
@@ -42,7 +41,7 @@ router.post('/classes', asyncHandler(async (req, res) => {
         termList,
         term,
         classes
-    }, session);
+    }, updatedSession);
 
     progressTracker.complete(response);
 }));
@@ -59,11 +58,11 @@ router.post('/single-class', asyncHandler(async (req, res) => {
     if (!authResult) {
         return;
     }
-    
+
     const { link, session } = authResult;
     progressTracker.update(50, 'Fetching classes');
 
-    const { assignmentsPage, schedulePage } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
+    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
 
     const courses = extractClassList(assignmentsPage);
     const { term, termList } = extractTermInfo(assignmentsPage);
@@ -73,7 +72,7 @@ router.post('/single-class', asyncHandler(async (req, res) => {
 
     const classes = Object.values(scheduleData);
     const currentClass = classes.find(c => c.name === req.body.options.class);
-    
+
     if (!currentClass) {
         throw new ValidationError("Class not found");
     }
@@ -83,7 +82,7 @@ router.post('/single-class', asyncHandler(async (req, res) => {
         termList,
         term,
         class: currentClass
-    }, session);
+    }, updatedSession);
 
     progressTracker.complete(response);
 }));
