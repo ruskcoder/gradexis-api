@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
 });
 
 import * as webPushService from './web-push.js';
-import { getReferralCode, getNumberOfReferrals } from './referrals.js';
+import { getReferralInfo } from './referrals.js';
 import supabase from './database.js';
 import hac from './hac/index.js';
 import hacv2 from './hac-v2/index.js';
@@ -61,12 +61,9 @@ app.get('/referral', async (req, res) => {
     if (!username) return res.status(400).json({ error: 'username is required' });
     username = username.toLowerCase();
 
-    const [referralCode, numberOfReferrals] = await Promise.all([
-      getReferralCode(username),
-      getNumberOfReferrals(username),
-    ]);
+    const { referralCode, numReferrals } = await getReferralInfo(username);
 
-    res.json({ referralCode, numberOfReferrals });
+    res.json({ referralCode, numReferrals });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

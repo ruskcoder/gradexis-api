@@ -92,34 +92,21 @@ async function addUser(username, name, school, referredFrom = null) {
     return {success: true, referralCode: userCode, numReferrals: 0};
 }
 
-async function getNumberOfReferrals(username) { 
+async function getReferralInfo(username) { 
     const { data, error } = await supabase
         .from('referrals')
-        .select('numReferrals')
-        .eq('username', username);
+        .select('referralCode, numReferrals')
+        .eq('username', username)
+        .single();
     
     if (error) throw error;
-    if (!data || data.length === 0) {
+    if (!data) {
         throw new Error(`Username '${username}' not found`);
     }
-    return data[0].numReferrals || 0;
-}
-
-async function getReferralCode(username) { 
-    const { data, error } = await supabase
-        .from('referrals')
-        .select('referralCode')
-        .eq('username', username);
-    
-    if (error) throw error;
-    if (!data || data.length === 0) {
-        throw new Error(`Username '${username}' not found`);
-    }
-    return data[0].referralCode;
+    return { referralCode: data.referralCode, numReferrals: data.numReferrals || 0 };
 }
 
 export {
     addUser,
-    getNumberOfReferrals,
-    getReferralCode
+    getReferralInfo
 }
