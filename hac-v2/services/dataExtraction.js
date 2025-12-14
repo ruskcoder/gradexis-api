@@ -129,7 +129,7 @@ function extractAssignmentData(assignmentsPage, scheduleData) {
 			const assignment = {
 				name: assignmentsPage(this).children().eq(2).children().first().text().trim(),
 				category: assignmentsPage(this).children().eq(3).text().trim(),
-				percentage: assignmentsPage(this).children().eq(9).text().trim(),
+				percentage: assignmentsPage(this).children().eq(9).text().trim().slice(0, -1),
 				score: assignmentsPage(this).children().eq(4).text().trim(),
 				totalPoints: parseFloat(assignmentsPage(this).children().eq(5).text().trim()) || "",
 				weight: parseFloat(assignmentsPage(this).children().eq(6).text().trim()) || "",
