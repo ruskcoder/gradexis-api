@@ -61,9 +61,13 @@ app.get('/referral', async (req, res) => {
     if (!username) return res.status(400).json({ error: 'username is required' });
     username = username.toLowerCase();
 
+    const blockedEnv = process.env.BLOCKED_USERS || '';
+    const blockedList = blockedEnv.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const blocked = blockedList.includes(username);
+
     const { referralCode, numReferrals } = await getReferralInfo(username);
 
-    res.json({ referralCode, numReferrals });
+    res.json({ referralCode, numReferrals, blocked });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
