@@ -8,9 +8,7 @@ const HTTP_STATUS = {
 };
 
 const ERROR_MESSAGES = {
-    INVALID_SESSION: "Welcome to",
-    INVALID_CREDENTIALS: "incorrect",
-    INVALID_CREDENTIALS_ALT: "invalid",
+    INVALID_LOGIN: "Welcome to",
     DISTRICT_NOT_FOUND: "District not Found",
     INVALID_USERNAME_PASSWORD: "Invalid username or password",
     MISSING_PARAMETERS: "Missing one or more required parameters",

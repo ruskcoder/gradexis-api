@@ -13,8 +13,8 @@ import {
 } from '../utils/validation.js';
 
 function checkSessionValidity(response) {
-  if (response.data.includes(ERROR_MESSAGES.INVALID_SESSION)) {
-    throw new AuthenticationError("Invalid Session");
+  if (response.data.includes(ERROR_MESSAGES.INVALID_LOGIN)) {
+    throw new AuthenticationError("Invalid Session or password");
   }
 }
 
@@ -58,8 +58,7 @@ async function authenticateWithCredentials(session, loginData, progressTracker) 
 
     const loginResult = await session.post(loginUrl, hacLoginData);
 
-    if (loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS) ||
-      loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS_ALT)) {
+    if (loginResult.data.includes(ERROR_MESSAGES.INVALID_LOGIN)) {
       if (progressTracker && progressTracker.streaming) {
         progressTracker.error(401, ERROR_MESSAGES.INVALID_USERNAME_PASSWORD);
         return; 
@@ -169,7 +168,9 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
 
 async function validateSessionWithLink(session, link, progressTracker) {
   try {
-    progressTracker.update(10, 'Validating existing session');
+    if (progressTracker && progressTracker.update) {
+      progressTracker.update(10, 'Validating existing session');
+    }
 
     const registration = await session.get(link + HAC_ENDPOINTS.HOME);
 
@@ -209,7 +210,7 @@ async function authenticateUser(req, progressTracker) {
         const validationResult = await validateSessionWithLink(session, sessionLink, progressTracker);
 
         if (validationResult.valid) {
-          return { session: validationResult.session, link: sessionLink, username: username || 'unknown' };
+          return { session: validationResult.session, link: sessionLink, username: loginData.username || 'unknown' };
         }
 
         if (validationResult.reason === 'expired') {
