@@ -18,7 +18,9 @@ function checkSessionValidity(response) {
   }
 }
 
-async function authenticateWithCredentials(session, username, password, link, district, progressTracker) {
+async function authenticateWithCredentials(session, loginData, progressTracker) {
+  let { username, password, link, district } = loginData;
+
   if (isTestCredentials(username, password)) {
     const prodCreds = getProductionCredentials();
     username = prodCreds.username;
@@ -26,21 +28,20 @@ async function authenticateWithCredentials(session, username, password, link, di
   }
 
   const loginUrl = `${link}${HAC_ENDPOINTS.LOGIN}`;
-  const loginData = createLoginData(username, password);
+  const hacLoginData = createLoginData(username, password);
 
   try {
     const { data: loginResponse } = await session.get(loginUrl);
     const $ = cheerio.load(loginResponse);
-    loginData["__RequestVerificationToken"] = $("input[name='__RequestVerificationToken']").val();
+    hacLoginData["__RequestVerificationToken"] = $("input[name='__RequestVerificationToken']").val();
 
-    if (district) {
-      const select = $('select.valid');
+    if (district && $('select').html()) {
+      const select = $('select');
       let found = false;
-
       select.find('option').each(function () {
-        const optionText = $(this).text().toLowerCase();
-        if (optionText.includes(district.toLowerCase())) {
-          loginData.Database = $(this).attr('value');
+        const optionText = $(this).text().toLowerCase().trim();
+        if (optionText === district.toLowerCase().trim()) {
+          hacLoginData.Database = $(this).attr('value');
           found = true;
           return false;
         }
@@ -55,7 +56,7 @@ async function authenticateWithCredentials(session, username, password, link, di
       }
     }
 
-    const loginResult = await session.post(loginUrl, loginData);
+    const loginResult = await session.post(loginUrl, hacLoginData);
 
     if (loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS) ||
       loginResult.data.includes(ERROR_MESSAGES.INVALID_CREDENTIALS_ALT)) {
@@ -68,9 +69,7 @@ async function authenticateWithCredentials(session, username, password, link, di
 
     session.hacData = loginResult.data;
     return { session, username };
-
   } catch (error) {
-
     if (progressTracker && progressTracker.streaming) {
       let errorMessage = "Login failed";
       let statusCode = 401;
@@ -189,10 +188,11 @@ async function validateSessionWithLink(session, link, progressTracker) {
 }
 
 async function authenticateUser(req, progressTracker) {
-  const loginDetails = validateLoginParameters(req);
-  let { loginType, link, username, password, clsession, session: existingSession, options } = loginDetails;
+  const validationResult = validateLoginParameters(req);
+  const { loginType, loginData, session: existingSession, options } = validationResult;
 
   let session = createSession();
+  let link = loginData.link;
 
   if (existingSession && Object.keys(existingSession).length > 0) {
     try {
@@ -217,7 +217,7 @@ async function authenticateUser(req, progressTracker) {
             progressTracker.update(15, 'Session expired, logging in');
           }
 
-          if (loginType === 'credentials' && (!username || !password)) {
+          if (loginType === 'credentials' && (!loginData.username || !loginData.password)) {
             if (progressTracker && progressTracker.streaming) {
               progressTracker.error(401, "Session is invalid or expired. Please provide valid credentials to re-authenticate.");
               return;
@@ -225,7 +225,7 @@ async function authenticateUser(req, progressTracker) {
             throw new AuthenticationError("Session is invalid or expired. Please provide valid credentials to re-authenticate.");
           }
 
-          if (loginType === 'classlink' && !clsession) {
+          if (loginType === 'classlink' && !loginData.clsession) {
             if (progressTracker && progressTracker.streaming) {
               progressTracker.error(401, "Session is invalid or expired. Please provide valid ClassLink session to re-authenticate.");
               return;
@@ -244,7 +244,7 @@ async function authenticateUser(req, progressTracker) {
   }
 
   if (loginType === 'classlink') {
-    const result = await authenticateWithClassLink(session, clsession, progressTracker);
+    const result = await authenticateWithClassLink(session, loginData.clsession, progressTracker);
 
     if (!result) {
       return;
@@ -255,9 +255,10 @@ async function authenticateUser(req, progressTracker) {
       link: result.link,
       username: result.username
     };
-  } else {
-    const district = options?.district;
-    const result = await authenticateWithCredentials(session, username, password, link, district, progressTracker);
+  } 
+  
+  else if (loginType === 'credentials') {
+    const result = await authenticateWithCredentials(session, loginData, progressTracker);
 
     if (!result) {
       return;
