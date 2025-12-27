@@ -29,7 +29,7 @@ async function referralCodeExists(code) {
     return count > 0;
 }
 
-async function addUser(username, name, school, referredFrom = null) {
+async function addUser(username, school, referredFrom = null) {
     if (referredFrom) referredFrom = referredFrom.toUpperCase();
 
     if (await userExists(username)) {
@@ -38,7 +38,6 @@ async function addUser(username, name, school, referredFrom = null) {
         }
 
         const updateFields = {};
-        if (name) updateFields.name = name;
         if (school) updateFields.school = school;
 
         if (Object.keys(updateFields).length > 0) {
@@ -66,7 +65,7 @@ async function addUser(username, name, school, referredFrom = null) {
     const userCode = generateCode();
     const { error } = await supabase
         .from('referrals')
-        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0, name, school }]);
+        .insert([{ username, referredFrom, referralCode: userCode, numReferrals: 0, school }]);
 
     if (error) throw error;
 
