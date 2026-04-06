@@ -2,28 +2,21 @@ import process from 'process';
 import express from 'express';
 import * as cheerio from 'cheerio';
 import { asyncHandler } from '../../errorHandler.js';
-import { authenticateUser, checkSessionValidity } from '../services/authentication.js';
+import { checkSessionValidity } from '../services/authentication.js';
 import { createSuccessResponse } from '../utils/session.js';
-import ProgressTracker from '../utils/progressTracker.js';
+import { setupHACRoute } from '../utils/routeHandler.js';
 import { HAC_ENDPOINTS } from '../config/constants.js';
 import { addUser } from '../../referrals.js';
 
 const router = express.Router();
 
 router.post('/info', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.body.stream === true);
-    progressTracker.update(0, 'Authenticating');
+    const setup = await setupHACRoute(req, res, 'Fetching student info');
+    if (!setup) return;
 
-    const authResult = await authenticateUser(req, progressTracker);
+    const { session, link, baseSession, username } = setup;
 
-    if (!authResult) {
-        return;
-    }
-    
-    const { link, session, username } = authResult;
-    progressTracker.update(50, 'Fetching student info');
-
-    const $$ = cheerio.load(session.hacData);
+    const $$ = cheerio.load(baseSession.hacData);
     const registration = await session.get(link + HAC_ENDPOINTS.REGISTRATION);
     checkSessionValidity(registration);
 
@@ -47,21 +40,24 @@ router.post('/info', asyncHandler(async (req, res) => {
             studentInfo.name = "Test User";
         }
     }
+
     const referredFrom = req.body.options?.referralCode;
     const ref = await addUser(username.toLowerCase(), studentInfo.school, referredFrom);
+    
     if (ref.success === false) {
-        progressTracker.error(409, ref.message);
+        setup.progressTracker.error(409, ref.message);
         return;
     }
+
     const response = createSuccessResponse({
         username,
         link,
         referralCode: ref.referralCode,
         numReferrals: ref.numReferrals,
         ...studentInfo
-    }, session);
+    }, baseSession);
 
-    progressTracker.complete(response);
+    setup.progressTracker.complete(response);
 }));
 
 export default router;

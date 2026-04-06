@@ -192,12 +192,31 @@ function calculateMonthCode(year, monthIndex) {
 	return Math.floor((targetDate - jan1) / 86400000);
 }
 
-async function navigateToMonth(session, link, targetMonthCode, progressTracker) {
+function extractCurrentMonthInfo($) {
+	const monthDisplay = $('#plnMain_cldAttendance > tbody > tr:nth-child(1) > td > table > tbody > tr > td:nth-child(2)').text().trim();
+	const [monthName, year] = monthDisplay.split(' ');
+	const monthIndex = new Date(monthName + ' 1, 2000').getMonth();
+	const monthCode = calculateMonthCode(parseInt(year), monthIndex);
+	
+	return {
+		monthName,
+		year: parseInt(year),
+		monthIndex,
+		monthCode
+	};
+}
+
+async function navigateToMonth(session, link, targetMonthCode, progressTracker, initialCheerio = null) {
 	const maxLoops = 15;
 	let loops = 0;
 
-	let currentPage = await session.get(link + HAC_ENDPOINTS.ATTENDANCE);
-	let $ = cheerio.load(currentPage.data);
+	let $;
+	if (initialCheerio) {
+		$ = initialCheerio;
+	} else {
+		const currentPage = await session.get(link + HAC_ENDPOINTS.ATTENDANCE);
+		$ = cheerio.load(currentPage.data);
+	}
 
 	while (loops < maxLoops) {
 		loops++;
@@ -209,10 +228,10 @@ async function navigateToMonth(session, link, targetMonthCode, progressTracker) 
 
 		if (!nextElement.text()) {
 			prev = parseInt(prevElement.attr('href').split('\'')[3].slice(1));
-			if (targetMonthCode > prev) return $; // Month not available
+			if (targetMonthCode > prev) return $;
 		} else if (!prevElement.text()) {
 			next = parseInt(nextElement.attr('href').split('\'')[3].slice(1));
-			if (targetMonthCode < next) return $; // Month not available
+			if (targetMonthCode < next) return $;
 		} else {
 			prev = parseInt(prevElement.attr('href').split('\'')[3].slice(1));
 			next = parseInt(nextElement.attr('href').split('\'')[3].slice(1));
@@ -228,7 +247,7 @@ async function navigateToMonth(session, link, targetMonthCode, progressTracker) 
 		} else if (targetMonthCode >= next) {
 			monthData['__EVENTARGUMENT'] = `V${next}`;
 		} else {
-			break; // We're at the right month
+			break;
 		}
 
 		const response = await session.post(link + HAC_ENDPOINTS.ATTENDANCE, monthData);
@@ -242,11 +261,13 @@ function extractAttendanceData($) {
 	const events = {};
 	const colorKey = {};
 
+	// Build color key mapping from event name to color
 	$('.sg-clearfix div').each(function () {
 		const styleAttr = $(this).children().eq(0).attr('style');
 		if (styleAttr) {
 			const color = styleAttr.substring(18).split(';')[0].toLowerCase();
-			colorKey[color] = $(this).children().eq(1).text();
+			const eventName = $(this).children().eq(1).text().trim();
+			colorKey[eventName] = color;
 		}
 	});
 
@@ -260,17 +281,48 @@ function extractAttendanceData($) {
 			const formattedDate = `${month}/${dateParts[0]}/${dateParts[2].slice(-2)}`;
 
 			if ($(this).attr('title')) {
-				events[formattedDate] = [{
-					event: $(this).attr('title').split('\n')[1],
-					color: $(this).attr('bgcolor').toLowerCase()
-				}];
+				// Parse tooltip: period, event, period, event...
+				const lines = $(this).attr('title').split('\n').map(l => l.trim()).filter(l => l);
+				const eventMap = {};
+
+				for (let i = 0; i < lines.length; i += 2) {
+					const period = lines[i];
+					const eventName = lines[i + 1];
+
+					if (eventName) {
+						if (!eventMap[eventName]) {
+							eventMap[eventName] = [];
+						}
+						eventMap[eventName].push(period);
+					}
+				}
+
+				// Look up color for each event from color key
+				events[formattedDate] = Object.entries(eventMap).map(([eventName, periods]) => ({
+					event: eventName,
+					periods: periods,
+					color: colorKey[eventName] || ''
+				}));
 			} else if ($(this).attr('style')) {
 				const color = $(this).attr('style').substring(17).split(';')[0].toLowerCase();
-				if (colorKey[color]) {
+				
+				// If color is #cccccc without a tooltip, default to "School Closed"
+				if (color === '#cccccc') {
 					events[formattedDate] = [{
-						event: colorKey[color],
+						event: 'School Closed',
+						periods: [],
 						color: color
 					}];
+				} else {
+					// Find event name from color key
+					const eventName = Object.entries(colorKey).find(([name, col]) => col === color)?.[0] || '';
+					if (eventName) {
+						events[formattedDate] = [{
+							event: eventName,
+							periods: [],
+							color: color
+						}];
+					}
 				}
 			}
 		}
@@ -504,6 +556,7 @@ export {
 	extractAssignmentData,
 	processAttendanceDate,
 	calculateMonthCode,
+	extractCurrentMonthInfo,
 	navigateToMonth,
 	extractAttendanceData,
 	extractProgressReports,

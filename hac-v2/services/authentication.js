@@ -33,7 +33,9 @@ async function authenticateWithCredentials(session, loginData, progressTracker) 
   try {
     const { data: loginResponse } = await session.get(loginUrl);
     const $ = cheerio.load(loginResponse);
-    hacLoginData["__RequestVerificationToken"] = $("input[name='__RequestVerificationToken']").val();
+    const token = $("input[name='__RequestVerificationToken']").val();
+    hacLoginData["__RequestVerificationToken"] = token;
+    session.setVerificationToken(token);
 
     if (district && $('select').html()) {
       const select = $('select');
@@ -67,6 +69,7 @@ async function authenticateWithCredentials(session, loginData, progressTracker) 
     }
 
     session.hacData = loginResult.data;
+    session.setLastValidationTime(Date.now());
     return { session, username };
   } catch (error) {
     if (progressTracker && progressTracker.streaming) {
@@ -139,6 +142,7 @@ async function authenticateWithClassLink(session, clsession, progressTracker) {
     }
 
     session.hacData = hacSplash;
+    session.setLastValidationTime(Date.now());
     return { session, username, link };
 
   } catch (error) {
@@ -178,8 +182,8 @@ async function validateSessionWithLink(session, link, progressTracker) {
       return { valid: false, reason: 'expired' };
     }
 
-    const splashPage = await session.get(link + HAC_ENDPOINTS.HOME);
-    session.hacData = splashPage.data;
+    session.hacData = registration.data;
+    session.setLastValidationTime(Date.now());
 
     return { valid: true, session };
   } catch (error) {
@@ -199,6 +203,11 @@ async function authenticateUser(req, progressTracker) {
     try {
       session = restoreCookiesIntoSession(session, existingSession);
 
+      if (session.isSessionFresh(5)) {
+        session.setLoginMetadata(loginType, loginData);
+        return { session, link, username: loginData.username || 'unknown' };
+      }
+
       let sessionLink = link;
       if (!sessionLink) {
         const cookies = typeof existingSession === 'string' ? JSON.parse(existingSession) : existingSession;
@@ -210,6 +219,7 @@ async function authenticateUser(req, progressTracker) {
         const validationResult = await validateSessionWithLink(session, sessionLink, progressTracker);
 
         if (validationResult.valid) {
+          session.setLoginMetadata(loginType, loginData);
           return { session: validationResult.session, link: sessionLink, username: loginData.username || 'unknown' };
         }
 
@@ -251,6 +261,7 @@ async function authenticateUser(req, progressTracker) {
       return;
     }
 
+    result.session.setLoginMetadata(loginType, loginData);
     return {
       session: result.session,
       link: result.link,
@@ -265,6 +276,7 @@ async function authenticateUser(req, progressTracker) {
       return;
     }
 
+    result.session.setLoginMetadata(loginType, loginData);
     return {
       session: result.session,
       link,
@@ -275,6 +287,8 @@ async function authenticateUser(req, progressTracker) {
 
 export {
   authenticateUser,
-  checkSessionValidity
+  checkSessionValidity,
+  authenticateWithCredentials,
+  authenticateWithClassLink
 };
 

@@ -1,9 +1,7 @@
 import express from 'express';
-import axios from 'axios';
 import { asyncHandler } from '../../errorHandler.js';
-import { authenticateUser } from '../services/authentication.js';
 import { createSuccessResponse } from '../utils/session.js';
-import ProgressTracker from '../utils/progressTracker.js';
+import { setupHACRoute } from '../utils/routeHandler.js';
 import { ValidationError } from '../middleware/errors.js';
 import {
     fetchClassesData,
@@ -15,34 +13,38 @@ import {
 
 const router = express.Router();
 
-router.post('/classes', asyncHandler(async (req, res) => {
-    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
-    progressTracker.update(0, 'Logging In');
-    const authResult = await authenticateUser(req, progressTracker);
-
-    if (!authResult) {
-        return;
-    }
-
-    const { link, session } = authResult;
-
-    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
+async function processClassesData(session, link, term, progressTracker) {
+    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, term, progressTracker);
     const courses = extractClassList(assignmentsPage);
-    const { term, termList } = extractTermInfo(assignmentsPage);
+    const { term: termData, termList } = extractTermInfo(assignmentsPage);
 
     let scheduleData = extractScheduleData(schedulePage, courses);
     scheduleData = extractAssignmentData(assignmentsPage, scheduleData);
 
     const classes = Object.values(scheduleData);
 
+    return { classes, termList, term: termData, updatedSession };
+}
+
+router.post('/classes', asyncHandler(async (req, res) => {
+    const setup = await setupHACRoute(req, res, 'Fetching classes');
+    if (!setup) return;
+
+    const { classes, termList, term, updatedSession } = await processClassesData(
+        setup.session,
+        setup.link,
+        req.body?.options?.term,
+        setup.progressTracker
+    );
+
     const response = createSuccessResponse({
         scoresIncluded: true,
         termList,
         term,
         classes
-    }, updatedSession);
+    }, updatedSession.baseSession);
 
-    progressTracker.complete(response);
+    setup.progressTracker.complete(response);
 }));
 
 router.post('/single-class', asyncHandler(async (req, res) => {
@@ -50,26 +52,16 @@ router.post('/single-class', asyncHandler(async (req, res) => {
         throw new ValidationError("Missing required parameters (class)");
     }
 
-    const progressTracker = new ProgressTracker(res, req.body?.stream === true);
-    progressTracker.update(0, 'Authenticating');
-    const authResult = await authenticateUser(req, progressTracker);
+    const setup = await setupHACRoute(req, res, 'Fetching classes');
+    if (!setup) return;
 
-    if (!authResult) {
-        return;
-    }
+    const { classes, termList, term, updatedSession } = await processClassesData(
+        setup.session,
+        setup.link,
+        req.body?.options?.term,
+        setup.progressTracker
+    );
 
-    const { link, session } = authResult;
-    progressTracker.update(50, 'Fetching classes');
-
-    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, req.body?.options?.term, progressTracker);
-
-    const courses = extractClassList(assignmentsPage);
-    const { term, termList } = extractTermInfo(assignmentsPage);
-
-    let scheduleData = extractScheduleData(schedulePage, courses);
-    scheduleData = extractAssignmentData(assignmentsPage, scheduleData);
-
-    const classes = Object.values(scheduleData);
     const currentClass = classes.find(c => c.name === req.body.options.class);
 
     if (!currentClass) {
@@ -81,9 +73,9 @@ router.post('/single-class', asyncHandler(async (req, res) => {
         termList,
         term,
         class: currentClass
-    }, updatedSession);
+    }, updatedSession.baseSession);
 
-    progressTracker.complete(response);
+    setup.progressTracker.complete(response);
 }));
 
 export default router;
