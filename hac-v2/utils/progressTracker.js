@@ -3,6 +3,18 @@ class ProgressTracker {
     constructor(res, streaming = false) {
         this.res = res;
         this.streaming = streaming;
+
+        if (this.streaming) {
+            this.res.status(200);
+            this.res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            this.res.setHeader('Cache-Control', 'no-cache, no-transform');
+            this.res.setHeader('Connection', 'keep-alive');
+            this.res.setHeader('X-Accel-Buffering', 'no');
+
+            if (typeof this.res.flushHeaders === 'function') {
+                this.res.flushHeaders();
+            }
+        }
     }
 
     update(percent, message) {
