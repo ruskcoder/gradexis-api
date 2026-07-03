@@ -12,7 +12,7 @@ import ProgressTracker from './progressTracker.js';
  */
 export async function setupHACRoute(req, res, fetchStage = 'Fetching data') {
   const progressTracker = new ProgressTracker(res, req.body?.stream === true);
-  progressTracker.update(0, 'Authenticating');
+  progressTracker.update(4, 'Authenticating');
 
   const authResult = await authenticateUser(req, progressTracker);
   if (!authResult) {
