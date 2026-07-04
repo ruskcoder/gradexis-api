@@ -16,13 +16,23 @@ router.post('/info', asyncHandler(async (req, res) => {
 
     const { session, link, baseSession, username } = setup;
 
-    const $$ = cheerio.load(baseSession.hacData);
     const registration = await session.get(link + HAC_ENDPOINTS.REGISTRATION);
     checkSessionValidity(registration);
 
     const $ = cheerio.load(registration.data);
 
     let studentInfo = {};
+    let district = '';
+
+    // Extract district from splash page if available
+    if (baseSession.hacData) {
+        try {
+            const $$ = cheerio.load(baseSession.hacData);
+            district = $$("span.sg-banner-text").text().trim();
+        } catch (e) {
+            // Ignore if hacData is not HTML
+        }
+    }
 
     if ($("span#plnMain_lblRegStudentName").length) {
         studentInfo = {
@@ -33,7 +43,7 @@ router.post('/info', asyncHandler(async (req, res) => {
             counselor: $("span#plnMain_lblCounselor").text().trim(),
             language: $("span#plnMain_lblLanguage").text().trim(),
             cohortYear: $("span#plnMain_lblCohortYear").text().trim(),
-            district: $$("span.sg-banner-text").text().trim(),
+            district,
         };
 
         if (studentInfo.name === process.env.MYNAME) {

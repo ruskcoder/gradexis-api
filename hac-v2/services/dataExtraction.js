@@ -53,12 +53,7 @@ async function fetchClassesData(session, link, term, progressTracker) {
 		session.cache.classes = data;
 	}
 
-	progressTracker.update(80, 'Organizing data');
-
-	const scheduleResponse = await session.get(link + HAC_ENDPOINTS.CLASSES);
-	const $$ = cheerio.load(scheduleResponse.data);
-
-	return { assignmentsPage: $, schedulePage: $$, session };
+	return { assignmentsPage: $, session };
 }
 
 function extractClassList(assignmentsPage) {
@@ -116,7 +111,6 @@ function extractAssignmentData(assignmentsPage, scheduleData) {
 				name: splitClassHeaderAndCourseName(
 					assignmentsPage(this).find('.sg-header .sg-header-heading').eq(0).text().trim()
 				).courseName.trim(),
-				period: "dropped",
 			};
 		}
 

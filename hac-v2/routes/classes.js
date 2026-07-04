@@ -5,21 +5,17 @@ import { setupHACRoute } from '../utils/routeHandler.js';
 import { ValidationError } from '../middleware/errors.js';
 import {
     fetchClassesData,
-    extractClassList,
     extractTermInfo,
-    extractScheduleData,
     extractAssignmentData
 } from '../services/dataExtraction.js';
 
 const router = express.Router();
 
 async function processClassesData(session, link, term, progressTracker) {
-    const { assignmentsPage, schedulePage, session: updatedSession } = await fetchClassesData(session, link, term, progressTracker);
-    const courses = extractClassList(assignmentsPage);
+    const { assignmentsPage, session: updatedSession } = await fetchClassesData(session, link, term, progressTracker);
     const { term: termData, termList } = extractTermInfo(assignmentsPage);
 
-    let scheduleData = extractScheduleData(schedulePage, courses);
-    scheduleData = extractAssignmentData(assignmentsPage, scheduleData);
+    let scheduleData = extractAssignmentData(assignmentsPage, {});
 
     const classes = Object.values(scheduleData);
 

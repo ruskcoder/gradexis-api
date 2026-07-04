@@ -225,9 +225,10 @@ async function authenticateUser(req, progressTracker) {
 
         if (validationResult.reason === 'expired') {
           if (progressTracker && progressTracker.streaming) {
-            progressTracker.update(15, 'Session expired, logging in');
+            progressTracker.update(15, 'Session expired, re-authenticating');
           }
 
+          // Session expired - check if we have credentials to re-authenticate
           if (loginType === 'credentials' && (!loginData.username || !loginData.password)) {
             if (progressTracker && progressTracker.streaming) {
               progressTracker.error(401, "Session is invalid or expired. Please provide valid credentials to re-authenticate.");
@@ -243,6 +244,9 @@ async function authenticateUser(req, progressTracker) {
             }
             throw new AuthenticationError("Session is invalid or expired. Please provide valid ClassLink session to re-authenticate.");
           }
+
+          // Fall through to re-authenticate with provided credentials/clsession
+          session = createSession();
         }
       }
     } catch (error) {
