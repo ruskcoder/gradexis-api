@@ -1,31 +1,41 @@
-import express from 'express';
-import { asyncHandler } from '../errorHandler.js';
+/**
+ * HAC platform registry.
+ *
+ * This object is the entire public contract HAC exposes to core. Core turns it
+ * into routes, drives every login type, streams progress, and formats responses.
+ * HAC only provides: its own credentials login, the detectors core needs, an
+ * SSO tile filter, an optional post-SSO hook, and one data function per route.
+ */
 
-// Import route modules
-import homeRoutes from './routes/home.js';
-import loginRoutes from './routes/login.js';
-import infoRoutes from './routes/info.js';
-import classesRoutes from './routes/classes.js';
-import scheduleRoutes from './routes/schedule.js';
-import attendanceRoutes from './routes/attendance.js';
-import teachersRoutes from './routes/teachers.js';
-import reportsRoutes from './routes/reports.js';
+import { HAC_ENDPOINTS } from './config/constants.js';
+import { formatLink, credentialsAuth, isSessionExpired } from './auth/credentials.js';
+import { finalizeSSO } from './auth/finalizeSSO.js';
+import { info } from './data/info.js';
+import { classes, singleClass } from './data/classes.js';
+import { schedule } from './data/schedule.js';
+import { attendance } from './data/attendance.js';
+import { teachers } from './data/teachers.js';
+import { ipr, reportCard, transcript } from './data/reports.js';
 
-const app = express();
-app.use(express.json());
-
-// Apply async handler to all app methods
-const _get = app.get.bind(app);
-app.get = (path, ...handlers) => _get(path, ...handlers.map(h => asyncHandler(h)));
-
-// Mount routes
-app.use('/', homeRoutes);
-app.use('/', loginRoutes);
-app.use('/', infoRoutes);
-app.use('/', classesRoutes);
-app.use('/', scheduleRoutes);
-app.use('/', attendanceRoutes);
-app.use('/', teachersRoutes);
-app.use('/', reportsRoutes);
-
-export default app;
+export default {
+  name: 'HAC',
+  mount: '/hac',
+  ssoFilter: ['hac', 'homeaccess', 'home access'],
+  loginTypes: ['credentials', 'classlink'],
+  homeEndpoint: HAC_ENDPOINTS.HOME,
+  formatLink,
+  credentialsAuth,
+  isSessionExpired,
+  finalizeSSO,
+  data: {
+    info,
+    classes,
+    singleClass,
+    schedule,
+    attendance,
+    teachers,
+    ipr,
+    reportCard,
+    transcript,
+  },
+};

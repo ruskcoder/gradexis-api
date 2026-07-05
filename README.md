@@ -10,5 +10,7 @@ Used by the app Gradexis:
 
 More coming soon!
 
+Want to add support for a new platform? See [core/README.md](core/README.md) — shared session handling, streaming progress, and route plumbing live in `core/`, so a platform only implements its own login + scraping. `hac-v2/` is the reference implementation.
+
 _Documentation in progress_
 

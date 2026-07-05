@@ -1,16 +1,5 @@
-const HTTP_STATUS = {
-    OK: 200,
-    BAD_REQUEST: 400,
-    UNAUTHORIZED: 401,
-    NOT_FOUND: 404,
-    INTERNAL_SERVER_ERROR: 500,
-    BAD_GATEWAY: 502
-};
-
 const ERROR_MESSAGES = {
-    INVALID_SESSION: "Welcome to",
-    INVALID_CREDENTIALS: "incorrect",
-    INVALID_CREDENTIALS_ALT: "invalid",
+    INVALID_LOGIN: "Welcome to",
     DISTRICT_NOT_FOUND: "District not Found",
     INVALID_USERNAME_PASSWORD: "Invalid username or password",
     MISSING_PARAMETERS: "Missing one or more required parameters",
@@ -26,10 +15,10 @@ const HAC_ENDPOINTS = {
     ATTENDANCE: 'HomeAccess/Content/Attendance/MonthlyView.aspx',
     INTERIM_PROGRESS: 'HomeAccess/Content/Student/InterimProgress.aspx',
     REPORT_CARDS: 'HomeAccess/Content/Student/ReportCards.aspx',
-    TRANSCRIPT: 'HomeAccess/Content/Student/Transcript.aspx'
+    TRANSCRIPT: 'HomeAccess/Content/Student/Transcript.aspx',
+    HOME: 'HomeAccess'
 };
 
-// Month mapping and names
 const MONTH_INPUTS = {
     'january': 0, 'jan': 0, '01': 0, 1: 0,
     'february': 1, 'feb': 1, '02': 1, 2: 1,
@@ -48,9 +37,9 @@ const MONTH_INPUTS = {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export {
-    HTTP_STATUS,
     ERROR_MESSAGES,
     HAC_ENDPOINTS,
     MONTH_INPUTS,
     MONTH_NAMES
 };
+

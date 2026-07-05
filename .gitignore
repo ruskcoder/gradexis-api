@@ -8,3 +8,7 @@ test*
 cl*.txt
 classes-old.json
 firebase-service-account.json
+
+CLAUDE.md
+.claude/
+graphify-out/

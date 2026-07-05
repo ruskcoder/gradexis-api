@@ -39,16 +39,21 @@ app.use((err, req, res, next) => {
 import * as webPushService from './web-push.js';
 import { getReferralInfo } from './referrals.js';
 import supabase from './database.js';
+import { createPlatformRoutes } from './core/index.js';
 import hac from './hac/index.js';
-import hacv2 from './hac-v2/index.js';
 import demo from './demo/index.js';
-import powerschool from './powerschool/index.js';
+
+// Every platform is a registry object; core turns it into routes and mounts it
+// at its declared prefix. Add a platform by importing it and pushing it here.
+// (powerschool/ still lives on disk but is not yet migrated to the registry
+// model, so it stays unmounted.)
+const platforms = [hac];
 
 app.use(cors());
-app.use('/hac', hac);
-app.use('/v2/hac', hacv2);
+for (const platform of platforms) {
+  app.use(platform.mount, createPlatformRoutes(platform));
+}
 app.use('/demo', demo);
-app.use('/powerschool', powerschool);
 
 app.use('/static', express.static(__dirname + '/static'));
 app.get('/', (req, res) => {
@@ -79,6 +84,8 @@ app.get('/vapid-public-key', (req, res) => {
   res.json({ publicKey });
 });
 
+// Public read of the announcements table for the web app. These are broadcast
+// notices, not per-user data, so no auth is required.
 app.get('/web-notifications', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -96,26 +103,32 @@ app.get('/web-notifications', async (req, res) => {
   }
 });
 
-app.post('/subscribe', (req, res) => {
-  console.log('New Device')
-  const { payload, platform = 'web' } = req.body;
-  webPushService.addSubscription(payload, platform);
-  res.status(201).json({ message: 'Subscription received successfully.' });
+app.post('/subscribe', async (req, res) => {
+  try {
+    const { payload, platform = 'web' } = req.body;
+    if (!payload) {
+      return res.status(400).json({ message: 'payload is required' });
+    }
+    await webPushService.addSubscription(payload, platform);
+    console.log('New device subscribed:', platform);
+    res.status(201).json({ message: 'Subscription received successfully.' });
+  } catch (error) {
+    console.error('Failed to save subscription:', error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 async function sendPushToAllDevices() {
   return webPushService.sendPushToAllDevices();
 }
 
-app.get('/send-test-push', async (req, res) => {
-  await sendPushToAllDevices();
-  res.send('Test push notification sent.');
-});
-
+// How often to fire the "go fetch" trigger, in minutes. Falls back to 1 hour.
+const pushIntervalMinutes = Number(process.env.PUSH_INTERVAL_MINUTES) || 60;
 setInterval(() => {
   sendPushToAllDevices()
     .catch(() => console.error('Failed to send push notifications.'));
-}, 1000 * 60 * 30); // Every 30 minutes
+}, 1000 * 60 * pushIntervalMinutes);
+console.log(`Push trigger scheduled every ${pushIntervalMinutes} minute(s)`);
 
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
