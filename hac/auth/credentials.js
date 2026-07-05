@@ -64,6 +64,32 @@ function createLoginData(username = '', password = '', token = '') {
 }
 
 /**
+ * Inspect a HAC portal's LogOn page and report the district `<select>` a few
+ * shared portals expose (one HAC host can front multiple districts, each a
+ * `Database` option). The client calls this before showing the credentials form
+ * so it can render a district picker only when one is actually needed.
+ *
+ * Returns `{ multiple, districts: [{ name, value }] }`. A portal with no select
+ * (or a single option) reports `multiple: false` and the client just logs in.
+ */
+async function listDistricts(session, rawLink) {
+  const link = formatLink(rawLink);
+  if (!link) throw new ValidationError('link is required to list districts');
+
+  const { data } = await session.get(`${link}${HAC_ENDPOINTS.LOGIN}`);
+  const $ = cheerio.load(data);
+
+  const districts = [];
+  $('select').first().find('option').each(function () {
+    const name = $(this).text().trim();
+    const value = $(this).attr('value');
+    if (name && value !== undefined) districts.push({ name, value });
+  });
+
+  return { multiple: districts.length > 1, districts };
+}
+
+/**
  * core's credentialsAuth contract: (session, loginData, progressTracker)
  *   -> { session, username } on success
  *   -> undefined if a streaming error was already sent.
@@ -130,6 +156,7 @@ export {
   isSessionExpired,
   checkSessionValidity,
   credentialsAuth,
+  listDistricts,
   isTestCredentials,
   getProductionCredentials,
   createLoginData,

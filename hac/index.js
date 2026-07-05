@@ -8,7 +8,7 @@
  */
 
 import { HAC_ENDPOINTS } from './config/constants.js';
-import { formatLink, credentialsAuth, isSessionExpired } from './auth/credentials.js';
+import { formatLink, credentialsAuth, isSessionExpired, listDistricts } from './auth/credentials.js';
 import { finalizeSSO } from './auth/finalizeSSO.js';
 import { info } from './data/info.js';
 import { classes, singleClass } from './data/classes.js';
@@ -26,6 +26,7 @@ export default {
   formatLink,
   credentialsAuth,
   isSessionExpired,
+  listDistricts,
   finalizeSSO,
   data: {
     info,

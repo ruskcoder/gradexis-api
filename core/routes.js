@@ -15,7 +15,7 @@
 import express from 'express';
 import { asyncHandler } from '../errorHandler.js';
 import ProgressTracker from './progressTracker.js';
-import { createSuccessResponse } from './session.js';
+import { createSession, createSuccessResponse } from './session.js';
 import { authenticate } from './auth/index.js';
 import { HTTP_STATUS, AuthenticationError } from './errors.js';
 
@@ -60,6 +60,24 @@ function createPlatformRoutes(platform) {
   router.post('/', asyncHandler(async (req, res) => {
     res.json({ message: `${platform.name} API`, success: true });
   }));
+
+  // /districts — public, unauthenticated helper: given a portal `link`, report
+  // whether that host fronts multiple districts (a shared HAC login `<select>`)
+  // so the client can show a district picker only when needed. Mounted only for
+  // platforms that implement it.
+  if (typeof platform.listDistricts === 'function') {
+    router.post('/districts', asyncHandler(async (req, res) => {
+      const link = req.body?.loginData?.link || req.body?.link;
+      if (!link) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'link is required',
+        });
+      }
+      const result = await platform.listDistricts(createSession(), link);
+      res.json({ success: true, ...result });
+    }));
+  }
 
   // /login — authenticate only, hand back the session envelope. Fetches no data,
   // but forces a validation probe (through the reauth wrapper) when possible so
