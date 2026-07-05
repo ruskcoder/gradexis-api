@@ -36,6 +36,23 @@ function isStreaming(req) {
   return req.body?.stream === true || req.body?.stream === 'true';
 }
 
+/**
+ * Emit a "second factor required" response for an SSO login that stopped at a 2FA
+ * challenge. It is a normal 200 (not an error) carrying `mfaRequired` plus the
+ * mid-challenge `session` envelope: the client renders the prompt, then re-calls
+ * the same route with that session and `loginData.clMFA` (the PIN string or the
+ * chosen icon filename) to finish logging in.
+ */
+function respondMfaChallenge(progressTracker, auth) {
+  const base = auth.session.baseSession || auth.session;
+  const envelope = createSuccessResponse(
+    { mfaRequired: true, mfaType: auth.mfaType, icons: auth.icons || undefined },
+    base
+  );
+  envelope.success = false; // login is not complete until the factor is cleared
+  progressTracker.complete(envelope);
+}
+
 function createPlatformRoutes(platform) {
   const router = express.Router();
 
@@ -52,6 +69,7 @@ function createPlatformRoutes(platform) {
     try {
       const auth = await authenticate(req, platform, progressTracker);
       if (!auth) return;
+      if (auth.mfaRequired) return respondMfaChallenge(progressTracker, auth);
 
       if (platform.homeEndpoint !== undefined && platform.isSessionExpired) {
         const probe = await auth.session.get(auth.link + platform.homeEndpoint);
@@ -76,6 +94,7 @@ function createPlatformRoutes(platform) {
       try {
         const auth = await authenticate(req, platform, progressTracker);
         if (!auth) return;
+        if (auth.mfaRequired) return respondMfaChallenge(progressTracker, auth);
 
         progressTracker.update(50, stage);
         const data = await platform.data[key](auth.session, auth.link, req.body?.options || {}, progressTracker);

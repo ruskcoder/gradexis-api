@@ -8,7 +8,7 @@ export {
     restoreCookiesIntoSession
 } from './session.js';
 export { createReauthSession } from './reauthSession.js';
-export { defaultFormatLink, createSessionValidator, streamOrThrow } from './platform.js';
+export { defaultFormatLink, createSessionValidator, streamOrThrow, assertSafeHttpUrl } from './platform.js';
 export { createLoginValidation } from './validation.js';
 export { authenticate, performLogin } from './auth/index.js';
 export { loginClassLink } from './auth/classlink.js';

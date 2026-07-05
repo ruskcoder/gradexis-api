@@ -21,7 +21,7 @@ export default {
   name: 'HAC',
   mount: '/hac',
   ssoFilter: ['hac', 'homeaccess', 'home access'],
-  loginTypes: ['credentials', 'classlink'],
+  loginTypes: ['credentials', 'classlink', 'classlinkCredentials'],
   homeEndpoint: HAC_ENDPOINTS.HOME,
   formatLink,
   credentialsAuth,

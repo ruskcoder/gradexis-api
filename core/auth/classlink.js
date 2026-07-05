@@ -5,7 +5,7 @@
  *   - `classlink`            : they hand us a `clsession` cookie directly.
  *   - `classlinkCredentials` : they hand us ClassLink username/password (+ a
  *                              district `code`), we log into ClassLink for them,
- *                              optionally clearing a 2FA icon challenge.
+ *                              clearing a 2FA challenge (PIN or image) if present.
  *
  * Both paths converge on the same finish: hit the ClassLink app catalog, pick
  * the tile whose name matches the platform's `ssoFilter`, and follow that tile's
@@ -13,9 +13,48 @@
  * password ever needed. The platform stays ignorant of ClassLink entirely; it
  * only contributes the `ssoFilter` search terms (and an optional `finalizeSSO`
  * hook for post-tile quirks like Conroe ISD).
+ *
+ * Two-factor authentication
+ * -------------------------
+ * Some districts require a second factor after the password. ClassLink offers
+ * two challenge kinds we support:
+ *   - `pin`   : the user enters a fixed 6-digit PIN.
+ *   - `image` : the user picks their secret icon out of a randomized grid.
+ * Both are answered by POSTing to the same `/login/twoformauth/{token}` endpoint
+ * and succeed when the response carries a `redirect:"…oauth2…"` string.
+ *
+ * Because clearing the challenge needs a second round-trip *from the user*, the
+ * flow is resumable: the first call surfaces `{ mfaRequired, mfaType, icons }`
+ * and stashes the ClassLink `token` in the session's serialized cache. The client
+ * shows the prompt, then re-calls with the same `session` plus `loginData.clMFA`
+ * (the PIN string or the chosen icon filename) and we pick up where we left off.
+ * A client that already knows the answer can also pass `clMFA` on the first call
+ * and clear the whole thing in a single request.
  */
 
 import { AuthenticationError, APIError } from '../errors.js';
+
+/**
+ * Pull the substring between `start` and the next `end`, throwing a clean
+ * AuthenticationError if either marker is missing. Replaces the bare
+ * `text.split(start)[1].split(end)[0]` chains, which throw an opaque
+ * `TypeError: Cannot read properties of undefined` (→ unhandled 500) the moment
+ * ClassLink tweaks its markup.
+ */
+function extractBetween(text, start, end, label) {
+  if (typeof text !== 'string') {
+    throw new AuthenticationError(`ClassLink login failed (unexpected ${label} response)`);
+  }
+  const from = text.indexOf(start);
+  if (from === -1) {
+    throw new AuthenticationError(`ClassLink login failed (could not read ${label})`);
+  }
+  const rest = text.slice(from + start.length);
+  const to = rest.indexOf(end);
+  // Mirror `rest.split(end)[0]`: when the end marker is absent, take the whole
+  // remainder (e.g. an OAuth redirect that ends with `code=xxx` and no `&`).
+  return to === -1 ? rest : rest.slice(0, to);
+}
 
 const CLASSLINK_CREDENTIALS_DEFAULTS = {
   os: 'Windows',
@@ -25,25 +64,74 @@ const CLASSLINK_CREDENTIALS_DEFAULTS = {
 };
 
 /**
- * Renders the 2FA icon-picker as a self-contained data: URL. When ClassLink
- * requires two-factor icon selection we can't answer it ourselves, so the login
- * fails with this HTML payload; the client shows it, the user picks an icon, and
- * retries with `loginData.clMFA` set to the chosen icon name.
+ * Inspect the `/login/twoformauth/{token}` challenge page and decide which kind
+ * of second factor ClassLink is asking for. The page markup is stable enough to
+ * fingerprint: the PIN page renders an `MFA Pin Entry` heading and a
+ * `verify-pin-auth` input, the image page renders a `Multi-factor Image` prompt
+ * and an `auth-image` thumbnail. Defaults to `image` (the older, more common
+ * kind) if neither fingerprint matches, so an unknown variant still surfaces a
+ * challenge rather than crashing.
  */
-function generateIconIframe(iconData) {
-  const iframeContent = `<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>Icon Selection</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background-color:#f5f5f5}.container{max-width:800px;margin:0 auto;background:white;padding:20px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}h2{text-align:center;color:#333;margin-bottom:30px}.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:15px}.icon-item{display:flex;flex-direction:column;align-items:center;padding:15px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;transition:all 0.3s ease;background:#fafafa}.icon-item:hover{border-color:#007bff;background:#f0f8ff;transform:translateY(-2px)}.icon-item img{width:48px;height:48px;margin-bottom:8px;object-fit:contain}.icon-name{font-size:12px;text-align:center;color:#666;word-break:break-word}</style></head><body><div class='container'><h2>Select an Icon</h2><div class='icon-grid' id='iconGrid'>${iconData.icons.map(icon => `<div class='icon-item' data-icon-id='${icon.id}' data-icon-name='${icon.name}'><img src='https://filescdn.classlink.com/resources/twofactor/${icon.name}' alt='${icon.short_name}' onerror='this.style.display=\"none\"'><div class='icon-name'>${icon.short_name}</div></div>`).join('')}</div></div><script>document.getElementById('iconGrid').addEventListener('click',function(e){const iconItem=e.target.closest('.icon-item');if(!iconItem)return;const selectedIcon={id:parseInt(iconItem.dataset.iconId),name:iconItem.dataset.iconName,short_name:iconItem.querySelector('.icon-name').textContent};window.parent.postMessage({type:'iconSelected',data:selectedIcon},'*');window.parent.postMessage({type:'closeIframe'},'*')});</script></body></html>`;
-  const encodedContent = btoa(unescape(encodeURIComponent(iframeContent)));
-  return `data:text/html;base64,${encodedContent}`;
+function detectMfaType(challengeHtml) {
+  const html = typeof challengeHtml === 'string' ? challengeHtml : '';
+  if (/verify-pin-auth|MFA Pin Entry|name="pin"/i.test(html)) return 'pin';
+  return 'image';
 }
 
 /**
- * Log into ClassLink with username/password against a district `code`, returning
- * the `login_url` we can follow to obtain an OAuth code. Handles the optional
- * 2FA icon challenge by throwing an AuthenticationError whose message carries the
- * icon-picker payload (unless `clMFA` was supplied to answer it).
+ * Answer a ClassLink 2FA challenge and return the follow-able `login_url`.
+ *
+ * PIN and image challenges post to the same endpoint but with different fields
+ * (`pin` vs `image1`). Success is signalled by a `redirect:"…"` string in the
+ * "Remember my device" page ClassLink returns; its absence means the PIN was
+ * wrong or the wrong icon was picked, which we translate into a clean 401.
+ */
+async function answerMfaChallenge(session, token, mfaType, clMFA) {
+  const body = mfaType === 'pin'
+    ? { pin: clMFA }
+    : { bresolution: '1680x1050', image1: clMFA };
+
+  const answered = await session.post(
+    `https://launchpad.classlink.com/login/twoformauth/${token}`,
+    body,
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+
+  if (typeof answered.data !== 'string' || !answered.data.includes('redirect:"')) {
+    throw new AuthenticationError(
+      mfaType === 'pin' ? 'Incorrect ClassLink PIN' : 'Incorrect ClassLink image selected'
+    );
+  }
+  return extractBetween(answered.data, 'redirect:"', '"', '2FA response');
+}
+
+/**
+ * Log into ClassLink with username/password against a district `code`.
+ *
+ * Returns one of:
+ *   - `{ loginUrl }`      : password (and any 2FA) cleared — follow it for OAuth.
+ *   - `{ mfaRequired }`   : a second factor is needed; carries `mfaType` and,
+ *                           for image challenges, the `icons` grid to render.
+ *                           The ClassLink `token` is stashed in `session.cache`
+ *                           so a follow-up call (same session + `clMFA`) resumes.
+ *
+ * If the caller is resuming — a `mfaToken` sits in the session cache and a
+ * `clMFA` answer is supplied — we skip straight to answering the challenge.
  */
 async function loginWithClassLinkCredentials(session, loginData, progressTracker) {
   const { username, password, code, clMFA } = loginData;
+
+  // --- Resume path: an earlier call already got us a challenge token ---
+  const pendingToken = session.cache?.mfaToken;
+  if (pendingToken && clMFA) {
+    const mfaType = session.cache?.mfaType || 'image';
+    progressTracker?.update?.(22, 'Verifying two-factor code');
+    const loginUrl = await answerMfaChallenge(session, pendingToken, mfaType, clMFA);
+    delete session.cache.mfaToken;
+    delete session.cache.mfaType;
+    return { loginUrl };
+  }
+
   if (!code) {
     throw new AuthenticationError('A ClassLink district code is required for classlinkCredentials login');
   }
@@ -51,7 +139,7 @@ async function loginWithClassLinkCredentials(session, loginData, progressTracker
   const clLoginData = { ...CLASSLINK_CREDENTIALS_DEFAULTS, username, password, code };
 
   const districtPage = await session.get('https://launchpad.classlink.com/' + code);
-  const csrfToken = districtPage.data.split('"csrfToken":"')[1].split('"')[0];
+  const csrfToken = extractBetween(districtPage.data, '"csrfToken":"', '"', 'district page');
 
   progressTracker?.update?.(20, 'Logging in to ClassLink');
   const loginResponse = await session.post(
@@ -65,23 +153,44 @@ async function loginWithClassLinkCredentials(session, loginData, progressTracker
     throw new AuthenticationError(result.ResultDescription || 'ClassLink login failed');
   }
 
-  // 2FA icon challenge (e.g. Conroe ISD). Without an answer, surface the picker.
-  if (result.token && !result.login_url) {
-    const icons = await session.get(
-      `https://launchpad.classlink.com/proxies/api/twofactors?token=${result.token}`
-    );
-    if (!clMFA) {
-      throw new AuthenticationError(generateIconIframe(icons.data));
-    }
-    const answered = await session.post(
-      `https://launchpad.classlink.com/login/twoformauth/${result.token}`,
-      { bresolution: '1680x1050', image1: clMFA },
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-    result.login_url = answered.data.split('redirect:"')[1].split('"')[0];
+  // No 2FA: ClassLink handed us a directly follow-able login URL.
+  if (result.login_url) {
+    return { loginUrl: result.login_url };
   }
 
-  return result.login_url;
+  // 2FA required: ClassLink returns a `token` and no `login_url`. Load the
+  // challenge page to learn whether it's a PIN or an image pick.
+  if (result.token) {
+    const challengePage = await session.get(
+      `https://launchpad.classlink.com/login/twoformauth/${result.token}`
+    );
+    const mfaType = detectMfaType(challengePage.data);
+
+    // If the client already knows the answer, clear it in this same request.
+    if (clMFA) {
+      progressTracker?.update?.(22, 'Verifying two-factor code');
+      return { loginUrl: await answerMfaChallenge(session, result.token, mfaType, clMFA) };
+    }
+
+    // Otherwise surface the challenge and remember the token for the follow-up.
+    let icons = null;
+    if (mfaType === 'image') {
+      const twofactors = await session.get(
+        `https://launchpad.classlink.com/proxies/api/twofactors?token=${result.token}`
+      );
+      icons = (twofactors.data?.icons || []).map((icon) => ({
+        ...icon,
+        // Convenience for the client: the full CDN URL of each candidate icon.
+        imageUrl: `https://filescdn.classlink.com/resources/twofactor/${icon.name}`,
+      }));
+    }
+
+    session.cache.mfaToken = result.token;
+    session.cache.mfaType = mfaType;
+    return { mfaRequired: true, mfaType, icons };
+  }
+
+  throw new AuthenticationError('ClassLink login failed (unexpected login response)');
 }
 
 /**
@@ -93,10 +202,11 @@ async function obtainClassLinkToken(session, loginUrl) {
   let exchangeCode;
 
   if (loginUrl) {
-    const code = (await session.get(loginUrl, {
+    const location = (await session.get(loginUrl, {
       maxRedirects: 0,
       validateStatus: (s) => s >= 200 && s < 400,
-    })).headers.location.split('code=')[1].split('&')[0];
+    })).headers.location;
+    const code = extractBetween(location, 'code=', '&', 'OAuth redirect');
     exchangeCode = await session.get(
       `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code`
     );
@@ -108,14 +218,17 @@ async function obtainClassLinkToken(session, loginUrl) {
         'Invalid ClassLink session. Maybe you signed out? Try signing in again.'
       );
     }
-    const jsLink = 'https://myapps.classlink.com/main' + landing.data.split('main')[1].split('"')[0];
+    const jsLink = 'https://myapps.classlink.com/main' +
+      extractBetween(landing.data, 'main', '"', 'launchpad landing');
     const js = await session.get(jsLink);
-    const clientId = js.data.split('clientId:"')[1].split('"')[0];
+    const clientId = extractBetween(js.data, 'clientId:"', '"', 'client id');
     const auth1 = await session.get(
       `https://launchpad.classlink.com/oauth2/v2/auth?scope=full&redirect_uri=https%3A%2F%2Fmyapps.classlink.com%2Foauth%2F&client_id=${clientId}&response_type=code`,
       { maxRedirects: 0, validateStatus: (s) => s >= 200 && s < 400 }
     );
-    const code = auth1.headers.location.split('code=')[1].split('&')[0];
+    // `extractBetween` accepts the marker at the very start, so a location that
+    // begins with "code=" (no leading text) still parses.
+    const code = extractBetween(auth1.headers.location, 'code=', '&', 'OAuth redirect');
     await session.get(auth1.headers.location);
     exchangeCode = await session.get(
       `https://myapps.apis.classlink.com/exchangeCode?code=${code}&response_type=code`
@@ -134,7 +247,8 @@ async function obtainClassLinkToken(session, loginUrl) {
  * @param {string[]} ssoFilter - platform tile-name search terms
  * @param {string} loginType - 'classlink' | 'classlinkCredentials'
  * @param {object} [progressTracker]
- * @returns {Promise<{session, link, username, appUrl, exchangeCode}>}
+ * @returns {Promise<{session, link, username, appUrl, exchangeCode}
+ *                  | {mfaRequired, mfaType, icons, session}>}
  */
 async function loginClassLink(session, loginData, ssoFilter, loginType, progressTracker) {
   if (!Array.isArray(ssoFilter) || ssoFilter.length === 0) {
@@ -143,7 +257,13 @@ async function loginClassLink(session, loginData, ssoFilter, loginType, progress
 
   let loginUrl = null;
   if (loginType === 'classlinkCredentials') {
-    loginUrl = await loginWithClassLinkCredentials(session, loginData, progressTracker);
+    const outcome = await loginWithClassLinkCredentials(session, loginData, progressTracker);
+    // A second factor is pending — bubble the challenge up so the route can hand
+    // the (cookie- and token-carrying) session back to the client to answer.
+    if (outcome.mfaRequired) {
+      return { mfaRequired: true, mfaType: outcome.mfaType, icons: outcome.icons, session };
+    }
+    loginUrl = outcome.loginUrl;
   } else {
     if (!loginData.clsession) {
       throw new AuthenticationError('clsession is required for classlink login');
@@ -190,4 +310,4 @@ async function loginClassLink(session, loginData, ssoFilter, loginType, progress
   return { session, link, username, appUrl, appHtml: follow.data, exchangeCode };
 }
 
-export { loginClassLink, generateIconIframe };
+export { loginClassLink };

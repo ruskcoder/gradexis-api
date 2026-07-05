@@ -13,7 +13,7 @@
 import process from 'process';
 import * as cheerio from 'cheerio';
 import { AuthenticationError, ValidationError, APIError } from '../../core/errors.js';
-import { createSessionValidator, streamOrThrow } from '../../core/platform.js';
+import { createSessionValidator, streamOrThrow, assertSafeHttpUrl } from '../../core/platform.js';
 import { HAC_ENDPOINTS, ERROR_MESSAGES } from '../config/constants.js';
 
 // HAC needs a custom link normalizer (drop a trailing /HomeAccess), so it does
@@ -25,7 +25,7 @@ function formatLink(link) {
   link = link.endsWith('/HomeAccess') ? link.slice(0, -11) : link;
   link = link + '/';
   link = link.startsWith('http') ? link : 'https://' + link;
-  return link;
+  return assertSafeHttpUrl(link);
 }
 
 // A page is a logged-out page if it's the LogOn form or the district splash.

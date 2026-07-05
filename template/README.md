@@ -57,7 +57,7 @@ custom URL handling.
 ## Login types come free
 
 `credentials` uses your `credentialsAuth`. Every SSO type — `classlink`
-(clsession), `classlinkCredentials` (+ 2FA icon), and future `microsoft` — is
+(clsession), `classlinkCredentials` (+ 2FA PIN/image), and future `microsoft` — is
 implemented entirely in `core/auth/`. To offer one, just add it to `loginTypes`
 and make sure `ssoFilter` matches your tile on the ClassLink/SSO dashboard. No
 platform code changes.

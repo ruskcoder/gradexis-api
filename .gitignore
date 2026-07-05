@@ -12,3 +12,5 @@ firebase-service-account.json
 CLAUDE.md
 .claude/
 graphify-out/
+test*
+*.har

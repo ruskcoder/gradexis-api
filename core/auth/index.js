@@ -45,9 +45,14 @@ function resolveLink(platform, loginData) {
 
 /**
  * Perform a FRESH login (no session reuse) for the given loginType.
- * Returns { session, link, username } or null if a streaming error was sent.
+ * Returns { session, link, username }, a { mfaRequired, ... } challenge (SSO
+ * second factor pending), or null if a streaming error was sent.
+ *
+ * `resumeSessionData` carries the client's serialized session on a 2FA
+ * follow-up: its cookies + cached challenge token are restored so the SSO flow
+ * can pick up the pending challenge rather than starting from scratch.
  */
-async function performLogin(platform, loginType, loginData, progressTracker) {
+async function performLogin(platform, loginType, loginData, progressTracker, resumeSessionData) {
   if (loginType === 'credentials') {
     const session = createSession();
     const result = await platform.credentialsAuth(session, loginData, progressTracker);
@@ -60,10 +65,16 @@ async function performLogin(platform, loginType, loginData, progressTracker) {
   }
 
   if (SSO_LOGIN_TYPES.has(loginType)) {
-    const session = createSession();
+    let session = createSession();
+    if (resumeSessionData) {
+      session = restoreCookiesIntoSession(session, resumeSessionData);
+    }
     const runner = loginType === 'microsoft' ? loginMicrosoft : loginClassLink;
     const result = await runner(session, loginData, platform.ssoFilter, loginType, progressTracker);
     if (!result) return null;
+
+    // A second factor is still pending — hand the challenge back untouched.
+    if (result.mfaRequired) return result;
 
     let { session: sess, link, username } = result;
     if (platform.finalizeSSO) {
@@ -87,6 +98,13 @@ async function authenticate(req, platform, progressTracker) {
   const relogin = async () => {
     const fresh = await performLogin(platform, loginType, loginData, null);
     if (!fresh) throw new AuthenticationError('Re-authentication failed');
+    // A silent re-login can't clear an interactive 2FA prompt on its own. It
+    // still succeeds when the stored `loginData` carries a `clMFA` answer (a
+    // known PIN / image), which performLogin applies inline; otherwise the user
+    // must sign in again and re-clear the second factor.
+    if (fresh.mfaRequired) {
+      throw new AuthenticationError('Session expired — please sign in again to re-verify two-factor');
+    }
     fresh.session.setLoginMetadata(loginType, loginData);
     return { session: fresh.session, link: fresh.link };
   };
@@ -99,6 +117,20 @@ async function authenticate(req, platform, progressTracker) {
       : base;
     return { session, link, username: username || loginData.username || 'unknown' };
   };
+
+  // --- 2FA follow-up: the client is re-sending the mid-challenge session with a
+  // `clMFA` answer. That session isn't a logged-in one yet, so don't run it
+  // through the reuse fast path — resume the SSO flow with its cookies + the
+  // challenge token stashed in its cache. ---
+  const isMfaResume =
+    SSO_LOGIN_TYPES.has(loginType) && loginData.clMFA && existingSession &&
+    Object.keys(existingSession).length > 0;
+  if (isMfaResume) {
+    const resumed = await performLogin(platform, loginType, loginData, progressTracker, existingSession);
+    if (!resumed) return null;
+    if (resumed.mfaRequired) return resumed; // still not cleared (e.g. wrong answer re-prompt)
+    return finish(resumed.session, resumed.link, resumed.username);
+  }
 
   // --- Fast path: reuse a session the client sent back ---
   if (existingSession && Object.keys(existingSession).length > 0) {
@@ -123,6 +155,7 @@ async function authenticate(req, platform, progressTracker) {
   // --- Fresh login ---
   const fresh = await performLogin(platform, loginType, loginData, progressTracker);
   if (!fresh) return null; // streaming error already sent
+  if (fresh.mfaRequired) return fresh; // SSO second factor pending
   return finish(fresh.session, fresh.link, fresh.username);
 }
 

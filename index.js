@@ -1,12 +1,15 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import process from 'process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 
@@ -24,7 +27,17 @@ try {
 
 const app = express();
 
-app.use(express.json());
+// Sit behind a reverse proxy (Vercel / nginx) in production; trust it so the
+// rate limiter keys off the real client IP rather than the proxy's.
+app.set('trust proxy', 1);
+
+// Baseline security headers (nosniff, frameguard, HSTS, etc.). The API serves
+// JSON + a tiny static site, so the permissive defaults are fine.
+app.use(helmet());
+
+// Cap request bodies. Login/session envelopes are small; without a limit a
+// client could POST an arbitrarily large body and exhaust memory.
+app.use(express.json({ limit: '256kb' }));
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -49,7 +62,48 @@ import demo from './demo/index.js';
 // model, so it stays unmounted.)
 const platforms = [hac];
 
-app.use(cors());
+// CORS: the browser web app is the only cross-origin caller that sends an
+// Origin header. Native apps (Expo fetch/XHR) send no Origin, so `!origin`
+// requests are allowed through. Everything else is rejected instead of the
+// previous wildcard `app.use(cors())` which let any website call the API with
+// credentials. Override the allowlist with CORS_ORIGINS (comma-separated).
+const allowedOrigins = (process.env.CORS_ORIGINS ||
+  'https://web.gradexis.app,https://gradexis.app')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
+
+// Global rate limit — a coarse ceiling against scraping/abuse. The data routes
+// make outbound requests to school portals on the caller's behalf, so an
+// unthrottled client could use the API to hammer those portals.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: Number(process.env.RATE_LIMIT_PER_MIN) || 120,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please slow down.' },
+});
+app.use(globalLimiter);
+
+// Tighter limit for unauthenticated write/enumeration endpoints (subscription
+// spam, referral-code enumeration).
+const strictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: Number(process.env.STRICT_RATE_LIMIT_PER_MIN) || 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please slow down.' },
+});
+
 for (const platform of platforms) {
   app.use(platform.mount, createPlatformRoutes(platform));
 }
@@ -60,7 +114,7 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-app.get('/referral', async (req, res) => {
+app.get('/referral', strictLimiter, async (req, res) => {
   try {
     let { username } = req.query;
     if (!username) return res.status(400).json({ error: 'username is required' });
@@ -74,7 +128,8 @@ app.get('/referral', async (req, res) => {
 
     res.json({ referralCode, numReferrals, blocked });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Referral lookup failed:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -99,11 +154,12 @@ app.get('/web-notifications', async (req, res) => {
 
     res.json({ data });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('web-notifications fetch failed:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.post('/subscribe', async (req, res) => {
+app.post('/subscribe', strictLimiter, async (req, res) => {
   try {
     const { payload, platform = 'web' } = req.body;
     if (!payload) {
@@ -114,7 +170,7 @@ app.post('/subscribe', async (req, res) => {
     res.status(201).json({ message: 'Subscription received successfully.' });
   } catch (error) {
     console.error('Failed to save subscription:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Failed to save subscription' });
   }
 });
 
@@ -132,14 +188,16 @@ console.log(`Push trigger scheduled every ${pushIntervalMinutes} minute(s)`);
 
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
-  
+
   const status = err.status || err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-  
+  // Only surface a message for deliberate 4xx client errors (validation, auth).
+  // For 5xx, hide the internal error text so stack/DB details aren't leaked.
+  const message = status < 500 ? err.message || 'Bad Request' : 'Internal Server Error';
+
   if (!res.headersSent) {
-    res.status(status).json({ 
-      success: false, 
-      message 
+    res.status(status).json({
+      success: false,
+      message,
     });
   }
 });
