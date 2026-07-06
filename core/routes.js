@@ -25,6 +25,7 @@ const ROUTE_TABLE = [
   { path: '/classes', key: 'classes', stage: 'Fetching classes' },
   { path: '/single-class', key: 'singleClass', stage: 'Fetching class' },
   { path: '/schedule', key: 'schedule', stage: 'Fetching schedule' },
+  { path: '/bellSchedule', key: 'bellSchedule', stage: 'Fetching bell schedule' },
   { path: '/attendance', key: 'attendance', stage: 'Fetching attendance' },
   { path: '/teachers', key: 'teachers', stage: 'Fetching teachers' },
   { path: '/reportCard', key: 'reportCard', stage: 'Fetching report cards' },

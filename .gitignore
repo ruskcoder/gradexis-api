@@ -14,3 +14,4 @@ CLAUDE.md
 graphify-out/
 test*
 *.har
+*.py

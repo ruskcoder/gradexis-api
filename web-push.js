@@ -1,5 +1,4 @@
 import webPush from 'web-push';
-import admin from 'firebase-admin';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import process from 'process';
@@ -36,7 +35,7 @@ function dedupeKeyFor(payload) {
  * Add (or refresh) a subscription. Upserts on dedupe_key so redundant
  * subscriptions for the same device collapse into one row.
  * @param {Object} payload - The subscription payload
- * @param {string} platform - web | web-firebase | android | ios
+ * @param {string} platform - web | web-firebase | expo
  */
 async function addSubscription(payload, platform = 'web') {
   const dedupeKey = dedupeKeyFor(payload);
@@ -82,40 +81,11 @@ async function removeSubscription(dedupeKey) {
 }
 
 /**
- * True if the error means the subscription is permanently gone and should be
- * pruned (as opposed to a transient failure worth keeping for next time).
+ * True if a web-push error means the subscription is permanently gone and
+ * should be pruned (as opposed to a transient failure worth keeping).
  */
-function isGoneError(error, platform) {
-  if (platform === 'android' || platform === 'ios') {
-    return (
-      error?.code === 'messaging/registration-token-not-registered' ||
-      error?.code === 'messaging/invalid-registration-token'
-    );
-  }
-  // web / web-firebase
+function isGoneError(error) {
   return error?.statusCode === 404 || error?.statusCode === 410;
-}
-
-/**
- * Send an FCM message and prune the subscription if the token is dead.
- */
-async function sendFcm(message, dedupeKey, platform, label) {
-  if (admin.apps.length === 0) {
-    console.log('Firebase Admin not available');
-    return;
-  }
-  try {
-    const result = await admin.messaging().send(message);
-    console.log(`Grade check trigger sent successfully (${label})`);
-    return result;
-  } catch (error) {
-    if (isGoneError(error, platform)) {
-      console.log(`Pruning dead ${label} subscription`);
-      await removeSubscription(dedupeKey);
-    } else {
-      console.error(`Failed to send notification to ${platform}:`, error);
-    }
-  }
 }
 
 /**
@@ -179,48 +149,7 @@ async function sendPushToAllDevices() {
     .map(async ({ subscription, platform }) => {
     const dedupeKey = dedupeKeyFor(subscription);
 
-    if (platform === 'android' && subscription.token) {
-      return sendFcm(
-        {
-          token: subscription.token,
-          data: { trigger: 'grade_check' },
-          android: { priority: 'high' },
-        },
-        dedupeKey,
-        platform,
-        'android'
-      );
-    }
-
-    if (platform === 'ios' && subscription.token) {
-      // iOS silent/background push via FCM -> APNs. iOS never lets the server
-      // run the fetch, so we only wake the app: content-available:1 with no
-      // alert/sound/badge makes this a background push. APNs requires priority 5
-      // and apns-push-type "background" for these, otherwise the push is
-      // rejected or the app is not woken.
-      const headers = {
-        'apns-push-type': 'background',
-        'apns-priority': '5',
-      };
-      if (process.env.APNS_BUNDLE_ID) {
-        headers['apns-topic'] = process.env.APNS_BUNDLE_ID;
-      }
-      return sendFcm(
-        {
-          token: subscription.token,
-          data: { trigger: 'grade_check' },
-          apns: {
-            headers,
-            payload: { aps: { 'content-available': 1 } },
-          },
-        },
-        dedupeKey,
-        platform,
-        'ios'
-      );
-    }
-
-    // web / web-firebase
+    // web / web-firebase (both go out via VAPID web-push)
     try {
       if (platform === 'web-firebase') {
         webPush.setVapidDetails('mailto:ruskcoder@gradexis.com', firebasePublicKey, firebasePrivateKey);
@@ -229,7 +158,7 @@ async function sendPushToAllDevices() {
       }
       return await webPush.sendNotification(subscription, notificationPayload);
     } catch (error) {
-      if (isGoneError(error, platform)) {
+      if (isGoneError(error)) {
         console.log('Pruning dead web subscription');
         await removeSubscription(dedupeKey);
       } else {

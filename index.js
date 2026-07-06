@@ -1,6 +1,5 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
 import process from 'process';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,20 +9,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-try {
-  const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, 'firebase-service-account.json'), 'utf-8'));
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log('Firebase Admin initialized');
-} catch (error) {
-  console.warn('Firebase Admin not initialized - service account file not found');
-}
 
 const app = express();
 
@@ -54,13 +42,14 @@ import { getReferralInfo } from './referrals.js';
 import supabase from './database.js';
 import { createPlatformRoutes } from './core/index.js';
 import hac from './hac/index.js';
+import skywardLegacy from './skyward-legacy/index.js';
 import demo from './demo/index.js';
 
 // Every platform is a registry object; core turns it into routes and mounts it
 // at its declared prefix. Add a platform by importing it and pushing it here.
 // (powerschool/ still lives on disk but is not yet migrated to the registry
 // model, so it stays unmounted.)
-const platforms = [hac];
+const platforms = [hac, skywardLegacy];
 
 // CORS: the browser web app is the only cross-origin caller that sends an
 // Origin header. Native apps (Expo fetch/XHR) send no Origin, so `!origin`
@@ -73,10 +62,19 @@ const allowedOrigins = (process.env.CORS_ORIGINS ||
   .map((s) => s.trim())
   .filter(Boolean);
 
+// In non-production, also allow any localhost / 127.0.0.1 origin (any port) so
+// the web app's dev server (Vite, etc.) can call a locally-running API. Never
+// loosened in production — there the allowlist above is the only thing accepted.
+const isDevOrigin = (origin) =>
+  process.env.NODE_ENV !== 'production' &&
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+        return callback(null, true);
+      }
       return callback(new Error('Not allowed by CORS'));
     },
   })
