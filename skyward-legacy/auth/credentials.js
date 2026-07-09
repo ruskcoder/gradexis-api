@@ -17,12 +17,49 @@ import { AuthenticationError, ValidationError, APIError } from '../../core/error
 import { createSessionValidator, streamOrThrow, defaultFormatLink } from '../../core/platform.js';
 import { ERROR_MESSAGES, SKYWARD_ENDPOINTS } from '../config/constants.js';
 
-// A logged-out / bad-credential Skyward response is the tiny "...invalid..." blob.
-// Real data pages are large HTML and never match, so this is safe for auto-relogin.
+// Detect a logged-out Skyward response so the reauth wrapper can transparently
+// re-login. Three shapes count as expired:
+//   1. The tiny "...invalid..." blob returned on a bad login / dead session POST.
+//   2. The "logged out" confirmation page (qloggedout001.w) Skyward bounces an
+//      expired session to — "You have been logged out. You may close this window
+//      at any time." It carries none of the login-form markers below, so without
+//      an explicit check it slipped through and surfaced "Could not find grid
+//      data" instead of a silent relogin.
+//   3. A full page that has bounced back to the Student/Family Access login form
+//      (seplog01.w) — large HTML, so the length check above misses it, which is
+//      why waiting out a session used to surface "Could not find grid data"
+//      instead of a silent relogin. We fingerprint the login form but require the
+//      absence of any authenticated gradebook marker, so a real data page (which
+//      always carries stuGradesGrid_/showGradeInfo) can never be misread as
+//      expired.
 function isSessionExpired(html) {
-  return typeof html === 'string' &&
-    html.length < 400 &&
-    html.toLowerCase().includes(ERROR_MESSAGES.INVALID_LOGIN);
+  if (typeof html !== 'string') return false;
+  if (html.length < 400 && html.toLowerCase().includes(ERROR_MESSAGES.INVALID_LOGIN)) return true;
+
+  const authenticated = /stuGradesGrid_\d+|showGradeInfo|sf_gridHtml/i.test(html);
+  if (authenticated) return false;
+  // The explicit logged-out landing page (qloggedout001.w).
+  if (/qloggedout\d*\.w|You have been logged out/i.test(html)) return true;
+  const looksLikeLogin =
+    /WService=wsEAplus\/seplog01\.w|nameid=["']?login["']?|name=["']?password["']?|Login\s*Area|sfLoginForm/i.test(html);
+  return looksLikeLogin;
+}
+
+/**
+ * Build a lazy request-body thunk for a token-bearing Skyward POST. The reauth
+ * wrapper calls it once up front and again after any relogin, so the retry picks
+ * up the FRESH encses/sessionid the new login wrote to `session.cache.skyward`
+ * rather than replaying the expired ones. `extra` merges in per-request fields.
+ */
+function tokenBody(session, extra = {}) {
+  return () => {
+    const t = skywardTokens(session);
+    return new URLSearchParams({
+      encses: t.encses || '',
+      sessionid: sessionId(t),
+      ...extra,
+    }).toString();
+  };
 }
 
 // Guard used by data functions after each authenticated request.
@@ -126,4 +163,5 @@ export {
   credentialsAuth,
   skywardTokens,
   sessionId,
+  tokenBody,
 };

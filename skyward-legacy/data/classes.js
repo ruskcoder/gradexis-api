@@ -8,8 +8,10 @@
  *                     category breakdown for one term -> scoresIncluded: true.
  *
  * Term model for the UI:
- *   termList  = top-level tabs (1ST, 2ND, ... or T1-T4, Q1-Q4, SM1, SM2)
- *   subterms  = { "1ST": ["PR1","PR2"], ... }  -> the subtab bar under a tab
+ *   termList  = flat list of every column, in order (PR1, PR2, 1ST, ..., SM2)
+ *   termTree  = the cascade as a nested forest [{ label, children }], coarsest
+ *               columns as roots -> the UI renders one subtab bar per level, to
+ *               whatever depth the district defines (PR -> term -> semester).
  *   averages  = every column keyed by its label, so the UI shows whichever
  *               tab/subtab is selected.
  * options.term (a term OR subterm label) drives which detail bucket we fetch.
@@ -29,14 +31,15 @@ function publicClass(cls) {
 async function classes(session, link, options, progressTracker) {
   const html = await fetchGradebookHtml(session, link, progressTracker);
   progressTracker?.update?.(75, 'Parsing grades');
-  const { hasSubterms, termList, subterms, term, classes } = parseGradebook(html);
+  const { hasSubterms, termList, termTree, term, currentTerms, classes } = parseGradebook(html);
   return {
     scoresIncluded: false,
     termsIncluded: true,
     hasSubterms,
     termList,
-    subterms,
+    termTree,
     term,
+    currentTerms,
     classes: classes.map(publicClass),
   };
 }
@@ -49,7 +52,7 @@ async function singleClass(session, link, options, progressTracker) {
   }
 
   const html = await fetchGradebookHtml(session, link, progressTracker);
-  const { hasSubterms, termList, subterms, term, classes } = parseGradebook(html);
+  const { hasSubterms, termList, termTree, term, currentTerms, classes } = parseGradebook(html);
 
   let current = null;
   if (courseFilter) {
@@ -90,8 +93,9 @@ async function singleClass(session, link, options, progressTracker) {
     termsIncluded: true,
     hasSubterms,
     termList,
-    subterms,
+    termTree,
     term: requestedTerm,
+    currentTerms,
     class: merged,
   };
 }

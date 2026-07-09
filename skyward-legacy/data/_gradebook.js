@@ -13,24 +13,22 @@
 
 import * as cheerio from 'cheerio';
 import { SKYWARD_ENDPOINTS } from '../config/constants.js';
-import { skywardTokens, sessionId, checkSessionValidity } from '../auth/credentials.js';
+import { skywardTokens, sessionId, checkSessionValidity, tokenBody } from '../auth/credentials.js';
+import { nestByFrequency, forestHasChildren, pathToLabel } from '../../core/termTree.js';
 
 // ---------------------------------------------------------------------------
 // Fetch: gradebook HTML + harvest every dynamic identifier we need later.
 // ---------------------------------------------------------------------------
 async function fetchGradebookHtml(session, link, progressTracker) {
   progressTracker?.update?.(55, 'Fetching gradebook');
-  const tokens = skywardTokens(session);
   const url = link + SKYWARD_ENDPOINTS.GRADEBOOK;
   const looksLikeGrid = (t) => /stuGradesGrid_\d+_|showGradeInfo/.test(t || '');
 
   let res = null;
   try {
-    const body = new URLSearchParams({
-      encses: tokens.encses || '',
-      sessionid: sessionId(tokens),
-    }).toString();
-    res = await session.post(url, body, {
+    // Lazy token body: if the reauth wrapper detects an expired session here and
+    // re-logs-in, the retry rebuilds from the fresh encses/sessionid.
+    res = await session.post(url, tokenBody(session), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
     });
   } catch (e) {
@@ -103,15 +101,46 @@ function harvestIdentifiers(session, html) {
 // ---------------------------------------------------------------------------
 // Parse: the gradebook overview -> term tabs, subtabs, per-class averages.
 // ---------------------------------------------------------------------------
+/** Collect the forest's leaf labels in the flat chronological `termList` order. */
+function leafLabels(termTree, termList) {
+  const leaves = new Set();
+  const walk = (n) => {
+    if (!n.children || n.children.length === 0) leaves.add(n.label);
+    else n.children.forEach(walk);
+  };
+  (termTree || []).forEach(walk);
+  return termList.filter((l) => leaves.has(l));
+}
+
+/** True if any class has a numeric posted average under `label`. */
+function anyNumericAverage(classes, label) {
+  return classes.some((c) => {
+    const v = c.averages && c.averages[label];
+    return v !== undefined && v !== null && v !== '' && !isNaN(parseFloat(v));
+  });
+}
+
+/**
+ * The current term = the finest (leaf) column still being graded. Future progress
+ * periods are blank, so the last leaf with a posted grade in any class is the one
+ * in progress. Falls back to the last leaf, then the last column, so there is
+ * always a sensible default (e.g. over the summer, when every term is graded, the
+ * most recent finest term is chosen rather than a coarse year/semester summary).
+ */
+function pickCurrentLeaf(termTree, termList, classes) {
+  const leaves = leafLabels(termTree, termList);
+  if (leaves.length === 0) return termList.length ? termList[termList.length - 1] : '';
+  for (let i = leaves.length - 1; i >= 0; i--) {
+    if (anyNumericAverage(classes, leaves[i])) return leaves[i];
+  }
+  return leaves[leaves.length - 1];
+}
+
 function parseGradebook(htmlContent) {
   const gm = /stuGradesGrid_(\d+)_\d+/.exec(htmlContent);
   const studentId = gm ? gm[1] : '';
 
-  const hierarchy = extractTermHierarchy(htmlContent);
-  const orderedLabels = Array.isArray(hierarchy) ? hierarchy : hierarchy.orderedLabels;
-  const termList = Array.isArray(hierarchy) ? [...orderedLabels] : hierarchy.termList;
-  const subterms = Array.isArray(hierarchy) ? {} : hierarchy.subtermsMap;
-  const hasSubterms = !Array.isArray(hierarchy) && Object.keys(subterms).length > 0;
+  const { termList, termTree, hasSubterms } = extractTermHierarchy(htmlContent);
 
   const classNames = extractClassInfo(htmlContent, studentId || '\\d+');
 
@@ -228,8 +257,17 @@ function parseGradebook(htmlContent) {
   }
 
   const classes = [...grouped.values()];
-  const term = termList.length > 0 ? termList[termList.length - 1] : '';
-  return { hasSubterms, termList, subterms, term, classes };
+  // Skyward exposes no per-column dates, so we can't date-match "today" the way
+  // PowerSchool does. But the current grading period is the finest (leaf) column
+  // still being graded: future progress periods are blank, so the LAST leaf that
+  // carries a posted grade in any class is the one in progress now. Picking that
+  // leaf — not the last column overall, which is a coarse semester summary (SM2)
+  // — makes the UI default to the bottom-most current term (e.g. PR6), and
+  // `currentTerms` is its ancestor path (coarsest→finest, e.g. SM2 → 3RD → PR6),
+  // so notifications can fire for every active level. Mirrors PowerSchool.
+  const term = pickCurrentLeaf(termTree, termList, classes);
+  const currentTerms = term ? pathToLabel(termTree, term) : [];
+  return { hasSubterms, termList, termTree, term, currentTerms, classes };
 }
 
 // ---------------------------------------------------------------------------
@@ -248,32 +286,39 @@ async function fetchClassDetail(session, link, courseId, termHint, progressTrack
   if (!chosen && labels.length > 0) chosen = labels[labels.length - 1];
   const anchor = chosen ? termMap[chosen] : null;
 
-  const formData = {
-    action: 'viewGradeInfoDialog',
-    gridCount: '1',
-    fromHttp: 'yes',
-    stuId: (anchor && anchor.sId) || sky.studentId || '',
-    entityId: (anchor && anchor.eId) || sky.entityId || '',
-    corNumId,
-    track,
-    section,
-    gbId: (anchor && anchor.gbId) || (sky.classGbMap && sky.classGbMap[key]) || sky.gbId || '',
-    bucket: (anchor && anchor.bucket) || '',
-    subjectId: '',
-    dialogLevel: '1',
-    isEoc: (anchor && anchor.isEoc) || 'no',
-    ishttp: 'true',
-    sessionid: sessionId(sky),
-    'javascript.filesAdded': sky.javascriptFilesAdded ||
-      'jquery.1.8.2.js,qsfmain001.css,sfgradebook.css,qsfmain001.min.js,sfgradebook.js,sfprint001.js',
-    encses: sky.encses || '',
-    dwd: sky.dwd || '',
-    wfaacl: sky.wfaacl || '',
-    requestId: String(Date.now()),
+  // Lazy body: re-read the token fields (sessionid/encses/dwd/wfaacl) from the
+  // session on each send so a reauth retry uses the refreshed login. The anchor-
+  // derived identifiers (stuId/gbId/bucket) are student-scoped and stable across
+  // sessions, so capturing them once is fine.
+  const makeBody = () => {
+    const t = skywardTokens(session);
+    return new URLSearchParams({
+      action: 'viewGradeInfoDialog',
+      gridCount: '1',
+      fromHttp: 'yes',
+      stuId: (anchor && anchor.sId) || t.studentId || '',
+      entityId: (anchor && anchor.eId) || t.entityId || '',
+      corNumId,
+      track,
+      section,
+      gbId: (anchor && anchor.gbId) || (t.classGbMap && t.classGbMap[key]) || t.gbId || '',
+      bucket: (anchor && anchor.bucket) || '',
+      subjectId: '',
+      dialogLevel: '1',
+      isEoc: (anchor && anchor.isEoc) || 'no',
+      ishttp: 'true',
+      sessionid: sessionId(t),
+      'javascript.filesAdded': t.javascriptFilesAdded ||
+        'jquery.1.8.2.js,qsfmain001.css,sfgradebook.css,qsfmain001.min.js,sfgradebook.js,sfprint001.js',
+      encses: t.encses || '',
+      dwd: t.dwd || '',
+      wfaacl: t.wfaacl || '',
+      requestId: String(Date.now()),
+    }).toString();
   };
 
   const res = await session.post(link + SKYWARD_ENDPOINTS.CLASS_DETAILS,
-    new URLSearchParams(formData).toString(),
+    makeBody,
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' } });
 
   progressTracker?.update?.(85, 'Parsing assignment details');
@@ -329,12 +374,18 @@ function findMatchingBrace(text, startPos) {
 
 function extractTermHierarchy(htmlContent) {
   /**
-   * Extract term and subterm hierarchy using pattern matching
-   * from the HTML data-bkt and data-lit attributes
+   * Reconstruct the term cascade from the gradebook's ordered columns.
+   *
+   * Skyward's grid gives no per-column dates, only the chronological run of
+   * data-lit labels (PR1 PR2 1ST PR3 PR4 2ND SM1 …). We infer the nesting
+   * data-drivenly: finer buckets recur more often across the year, so a column
+   * whose label-family appears fewer times is coarser and adopts the run of
+   * finer columns just before it (see core/termTree.js#nestByFrequency). That
+   * yields arbitrary depth (PR → term → semester → year) with no hard-coded
+   * term names, and the coarsest columns become the roots (the top tabs).
    */
-  console.log("[1/2] Harvesting chronological column layout...");
 
-  // Extract unique data columns in their exact visual order
+  // Extract unique data columns in their exact visual order.
   const columnPattern = /data-bkt=['"]([^'"]+)['"]\s+data-lit=['"]([^'"]+)['"]/g;
   const orderedLabels = [];
   const seen = new Set();
@@ -348,66 +399,12 @@ function extractTermHierarchy(htmlContent) {
     }
   }
 
-  console.log("[2/2] Running text pattern matching rules...");
+  const termTree = nestByFrequency(orderedLabels);
+  const hasSubterms = forestHasChildren(termTree);
 
-  // Define regex patterns matching standard Skyward conventions
-  const subTermPattern = /^(?:PR\d+|M\d+)$/i;
-  const termPattern = /^(?:\d+(?:ST|ND|RD|TH)|Q\d+|T\d+)$/i;
-  const semesterPattern = /^(?:SM\d+|SEM\d+|S\d+)$/i;
-
-  const hasSubterms = orderedLabels.some(label => subTermPattern.test(label));
-
-  const finalHierarchy = {};
-  const termList = [];
-  const subtermsMap = {};
-
-  if (!hasSubterms) {
-    console.log("\n[Flat Grading Setup Detected]: No multi-tiered sub-bucket milestones discovered.");
-    console.log("Chronological Flow: " + orderedLabels.join(" → "));
-    return orderedLabels;
-  }
-
-  let currentTermChildren = [];
-
-  for (const label of orderedLabels) {
-    if (subTermPattern.test(label)) {
-      currentTermChildren.push(label);
-    } else if (termPattern.test(label)) {
-      finalHierarchy[label] = {
-        children: [...currentTermChildren],
-        type: "Term Calculation Summary"
-      };
-      termList.push(label);
-      subtermsMap[label] = [...currentTermChildren];
-      currentTermChildren = [];
-    } else if (semesterPattern.test(label)) {
-      finalHierarchy[label] = {
-        children: [],
-        type: "Flat Semester Summary"
-      };
-      termList.push(label);
-      subtermsMap[label] = [];
-      currentTermChildren = [];
-    } else {
-      finalHierarchy[label] = {
-        children: [],
-        type: "Independent Baseline Bucket"
-      };
-    }
-  }
-
-  console.log("\n=== SKYWARD AUTOMATED PATTERN RELATIONSHIP MAP ===");
-  for (const [milestone, meta] of Object.entries(finalHierarchy)) {
-    if (meta.children.length > 0) {
-      console.log(`\n[${meta.type}]: ${milestone}`);
-      console.log(`   └── Assembles grades from components: ${meta.children.join(', ')}`);
-    } else {
-      console.log(`\n[${meta.type}]: ${milestone}`);
-      console.log(`   └── Functions as a standalone flat column (No sub-terms).`);
-    }
-  }
-
-  return { orderedLabels, termList, subtermsMap };
+  // termList stays flat: every column, in chronological order. termTree carries
+  // the nesting the UI renders as cascading subtabs.
+  return { orderedLabels, termList: [...orderedLabels], termTree, hasSubterms };
 }
 
 function extractClassInfo(htmlContent, studentId = '272676') {

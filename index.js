@@ -43,13 +43,12 @@ import supabase from './database.js';
 import { createPlatformRoutes } from './core/index.js';
 import hac from './hac/index.js';
 import skywardLegacy from './skyward-legacy/index.js';
+import powerschool from './powerschool/index.js';
 import demo from './demo/index.js';
 
 // Every platform is a registry object; core turns it into routes and mounts it
 // at its declared prefix. Add a platform by importing it and pushing it here.
-// (powerschool/ still lives on disk but is not yet migrated to the registry
-// model, so it stays unmounted.)
-const platforms = [hac, skywardLegacy];
+const platforms = [hac, skywardLegacy, powerschool];
 
 // CORS: the browser web app is the only cross-origin caller that sends an
 // Origin header. Native apps (Expo fetch/XHR) send no Origin, so `!origin`

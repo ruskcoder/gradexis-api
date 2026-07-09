@@ -6,7 +6,7 @@
 
 import * as cheerio from 'cheerio';
 import { SKYWARD_ENDPOINTS } from '../config/constants.js';
-import { skywardTokens, sessionId, checkSessionValidity } from '../auth/credentials.js';
+import { checkSessionValidity, tokenBody } from '../auth/credentials.js';
 
 function parseSchedule($) {
   let building = '';
@@ -69,13 +69,7 @@ function parseSchedule($) {
 }
 
 async function schedule(session, link, options, progressTracker) {
-  const tokens = skywardTokens(session);
-  const body = new URLSearchParams({
-    encses: tokens.encses || '',
-    sessionid: sessionId(tokens),
-  }).toString();
-
-  const res = await session.post(link + SKYWARD_ENDPOINTS.SCHEDULE, body, {
+  const res = await session.post(link + SKYWARD_ENDPOINTS.SCHEDULE, tokenBody(session), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       Referer: link + SKYWARD_ENDPOINTS.HOME,

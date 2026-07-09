@@ -4,19 +4,14 @@
  */
 
 import { SKYWARD_ENDPOINTS } from '../config/constants.js';
-import { skywardTokens, sessionId, checkSessionValidity } from '../auth/credentials.js';
+import { checkSessionValidity, tokenBody } from '../auth/credentials.js';
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function info(session, link, options, progressTracker) {
-  const tokens = skywardTokens(session);
-  const body = new URLSearchParams({
-    encses: tokens.encses || '',
-    sessionid: sessionId(tokens),
-  }).toString();
-  const res = await session.post(link + SKYWARD_ENDPOINTS.INFO, body, {
+  const res = await session.post(link + SKYWARD_ENDPOINTS.INFO, tokenBody(session), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
   });
   checkSessionValidity(res);

@@ -9,19 +9,13 @@
 
 import * as cheerio from 'cheerio';
 import { SKYWARD_ENDPOINTS, ERROR_MESSAGES } from '../config/constants.js';
-import { skywardTokens, sessionId, checkSessionValidity } from '../auth/credentials.js';
+import { checkSessionValidity, tokenBody } from '../auth/credentials.js';
 import { APIError, HTTP_STATUS } from '../../core/errors.js';
 
 const TIME_RE = /\b(\d{1,2}:\d{2}\s*[AaPp][Mm])\s*[-–]\s*(\d{1,2}:\d{2}\s*[AaPp][Mm])\b/;
 
 async function bellSchedule(session, link, options, progressTracker) {
-  const tokens = skywardTokens(session);
-  const body = new URLSearchParams({
-    encses: tokens.encses || '',
-    sessionid: sessionId(tokens),
-  }).toString();
-
-  const res = await session.post(link + SKYWARD_ENDPOINTS.SCHEDULE, body, {
+  const res = await session.post(link + SKYWARD_ENDPOINTS.SCHEDULE, tokenBody(session), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       Referer: link + SKYWARD_ENDPOINTS.HOME,

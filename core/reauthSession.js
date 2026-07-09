@@ -25,28 +25,48 @@ function createReauthSession(baseSession, link, { isSessionExpired, relogin }) {
     maxAttempts: 1,
   };
 
-  const guardedGet = async (url, config) => {
-    let response = await state.baseSession.get(url, config);
+  // `data` may be a value or a `() => value` thunk. Portals whose request body
+  // embeds session tokens (Skyward's encses/sessionid) pass a thunk so the retry
+  // after a relogin rebuilds the body from the NEW session's fresh tokens instead
+  // of replaying the expired ones. Plain values (HAC, cookie-auth POSTs) are used
+  // as-is.
+  const resolveData = (data) => (typeof data === 'function' ? data() : data);
 
+  // Shared expiry-detect + one-shot relogin + retry, used for both GET and POST.
+  // On POST the body is re-resolved after the relogin so token-bearing requests
+  // are rebuilt against the refreshed session.
+  const guarded = (method) => async (url, ...rest) => {
+    const send = () => {
+      if (method === 'post') {
+        const [data, config] = rest;
+        return state.baseSession.post(url, resolveData(data), config);
+      }
+      return state.baseSession.get(url, rest[0]);
+    };
+
+    let response = await send();
     const expired = typeof isSessionExpired === 'function' && isSessionExpired(response.data);
     if (expired && relogin && state.attempts < state.maxAttempts) {
       state.attempts++;
       const fresh = await relogin();
       if (fresh?.session) state.baseSession = fresh.session;
       if (fresh?.link) state.link = fresh.link;
-      response = await state.baseSession.get(url, config);
+      response = await send();
     }
 
     state.attempts = 0;
     return response;
   };
 
+  const guardedGet = guarded('get');
+  const guardedPost = guarded('post');
+
   const handler = {
     get(_target, prop) {
       if (prop === 'baseSession') return state.baseSession;
       if (prop === 'link') return state.link;
       if (prop === 'get') return guardedGet;
-      if (prop === 'post') return (url, data, config) => state.baseSession.post(url, data, config);
+      if (prop === 'post') return guardedPost;
 
       const value = state.baseSession[prop];
       return typeof value === 'function' ? value.bind(state.baseSession) : value;

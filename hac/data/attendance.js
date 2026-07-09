@@ -139,16 +139,17 @@ function extractAttendanceData($) {
       events[formattedDate] = Object.entries(eventMap).map(([eventName, periods]) => ({
         event: eventName,
         periods,
+        classes: [],
         color: colorKey[eventName] || '',
       }));
     } else if ($(this).attr('style')) {
       const color = $(this).attr('style').substring(17).split(';')[0].toLowerCase();
       if (color === '#cccccc') {
-        events[formattedDate] = [{ event: 'School Closed', periods: [], color }];
+        events[formattedDate] = [{ event: 'School Closed', periods: [], classes: [], color }];
       } else {
         const eventName = Object.entries(colorKey).find(([, col]) => col === color)?.[0] || '';
         if (eventName) {
-          events[formattedDate] = [{ event: eventName, periods: [], color }];
+          events[formattedDate] = [{ event: eventName, periods: [], classes: [], color }];
         }
       }
     }

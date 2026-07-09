@@ -8,7 +8,7 @@
 
 import * as cheerio from 'cheerio';
 import { SKYWARD_ENDPOINTS } from '../config/constants.js';
-import { skywardTokens, sessionId, checkSessionValidity } from '../auth/credentials.js';
+import { checkSessionValidity, tokenBody } from '../auth/credentials.js';
 
 const MONTH_REGEX = /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/i;
 
@@ -34,10 +34,13 @@ function parseHistoryTable($) {
     const date = `${parsed.getMonth() + 1}/${parsed.getDate()}/${String(parsed.getFullYear()).slice(-2)}`;
     const periods = periodText ? periodText.split(/[,&]/).map((s) => s.trim()).filter(Boolean) : [];
 
+    // `classes` is an array to match PowerSchool/HAC so one UI renders every
+    // platform's attendance without per-platform shape handling.
+    const cls = className && className !== 'View Classes' ? className : '';
     (events[date] = events[date] || []).push({
       event: code,
       periods,
-      class: className && className !== 'View Classes' ? className : '',
+      classes: cls ? [cls] : [],
       color: '',
     });
   });
@@ -83,7 +86,7 @@ function parseCalendar($) {
         if (name) (eventMap[name] = eventMap[name] || []).push(lines[i]);
       }
       events[date] = Object.entries(eventMap).map(([event, periods]) => ({
-        event, periods, color: colorKey[event] || '',
+        event, periods, classes: [], color: colorKey[event] || '',
       }));
     }
   });
@@ -92,13 +95,7 @@ function parseCalendar($) {
 }
 
 async function attendance(session, link, options, progressTracker) {
-  const tokens = skywardTokens(session);
-  const body = new URLSearchParams({
-    encses: tokens.encses || '',
-    sessionid: sessionId(tokens),
-  }).toString();
-
-  const res = await session.post(link + SKYWARD_ENDPOINTS.ATTENDANCE, body, {
+  const res = await session.post(link + SKYWARD_ENDPOINTS.ATTENDANCE, tokenBody(session), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       Referer: link + SKYWARD_ENDPOINTS.HOME,

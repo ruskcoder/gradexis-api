@@ -80,6 +80,23 @@ function createPlatformRoutes(platform) {
     }));
   }
 
+  // /authMethods — public, unauthenticated helper: given a portal `link`, report
+  // which sign-in methods that district's portal offers ({ credentials, microsoft,
+  // ssoUrl }) so the client can show the right buttons (some PowerSchool districts
+  // are credentials-only, others Microsoft-SSO-only). Mounted only for platforms
+  // that implement it.
+  if (typeof platform.authMethods === 'function') {
+    router.post('/authMethods', asyncHandler(async (req, res) => {
+      const rawLink = req.body?.loginData?.link || req.body?.link;
+      if (!rawLink) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'link is required' });
+      }
+      const link = (platform.formatLink || ((l) => l))(rawLink);
+      const result = await platform.authMethods(createSession(), link);
+      res.json({ success: true, ...result });
+    }));
+  }
+
   // /login — authenticate only, hand back the session envelope. Fetches no data,
   // but forces a validation probe (through the reauth wrapper) when possible so
   // an expired session is caught here rather than on the next data call.

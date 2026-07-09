@@ -13,7 +13,7 @@
  * `homeEndpoint`.
  */
 
-import { createSession, restoreCookiesIntoSession } from '../session.js';
+import { createSession, restoreCookiesIntoSession, seedCookiesIntoSession } from '../session.js';
 import { createReauthSession } from '../reauthSession.js';
 import { defaultFormatLink } from '../platform.js';
 import { AuthenticationError, ValidationError, APIError } from '../errors.js';
@@ -64,6 +64,28 @@ async function performLogin(platform, loginType, loginData, progressTracker, res
     };
   }
 
+  // Cookie-handoff login: the client completed the portal's real SSO (e.g.
+  // Microsoft) in a WebView and captured the resulting portal cookies. We seed
+  // them into a fresh jar and validate — no password, no server-side scraping of
+  // the identity provider, so MFA / risk challenges are handled by the user's own
+  // browser. On expiry the client re-runs the WebView (silently if the IdP's
+  // "stay signed in" cookie is still valid) and hands over fresh cookies.
+  if (loginType === 'microsoftSession') {
+    const session = createSession();
+    const link = resolveLink(platform, loginData);
+    if (!link) throw new ValidationError('link is required for microsoftSession login');
+    if (!loginData.cookies) throw new ValidationError('cookies are required for microsoftSession login');
+    seedCookiesIntoSession(session, loginData.cookies, link);
+
+    if (platform.homeEndpoint !== undefined && platform.isSessionExpired) {
+      const probe = await session.get(link + platform.homeEndpoint);
+      if (platform.isSessionExpired(probe.data)) {
+        throw new AuthenticationError('Microsoft session expired — please sign in again');
+      }
+    }
+    return { session, link, username: loginData.username };
+  }
+
   if (SSO_LOGIN_TYPES.has(loginType)) {
     let session = createSession();
     if (resumeSessionData) {
@@ -106,25 +128,57 @@ async function authenticate(req, platform, progressTracker) {
       throw new AuthenticationError('Session expired — please sign in again to re-verify two-factor');
     }
     fresh.session.setLoginMetadata(loginType, loginData);
+    // Carry the freshly-discovered link + a validation stamp on the re-logged-in
+    // session so, once it's serialized back to the client, it takes the fast path
+    // on subsequent requests too (see finish()).
+    if (fresh.link) fresh.session.cache.link = fresh.link;
+    fresh.session.setLastValidationTime(Date.now());
     return { session: fresh.session, link: fresh.link };
   };
 
   const finish = (base, link, username) => {
+    const resolvedUser = username || loginData.username || base.cache?.username || 'unknown';
     base.setLoginMetadata(loginType, loginData);
-    base.username = username || loginData.username || 'unknown';
+    base.username = resolvedUser;
+    // Persist the resolved district portal link (and username) in the session
+    // cache so they round-trip to the client and back. For SSO logins (ClassLink)
+    // the link is discovered by walking a dashboard tile and isn't in loginData —
+    // without stashing it here, every reused session would have to re-run the whole
+    // SSO dance just to rediscover where the portal lives.
+    if (link) base.cache.link = link;
+    if (resolvedUser !== 'unknown') base.cache.username = resolvedUser;
+    // Stamp a validation time so the next request carrying this session takes the
+    // no-network fast path (isSessionFresh) instead of re-authenticating. A session
+    // that has actually expired is still caught by the reauth wrapper on the next
+    // data call, which transparently re-logs-in.
+    base.setLastValidationTime(Date.now());
     const session = platform.isSessionExpired
       ? createReauthSession(base, link, { isSessionExpired: platform.isSessionExpired, relogin })
       : base;
-    return { session, link, username: username || loginData.username || 'unknown' };
+    return { session, link, username: resolvedUser };
   };
 
   // --- 2FA follow-up: the client is re-sending the mid-challenge session with a
   // `clMFA` answer. That session isn't a logged-in one yet, so don't run it
   // through the reuse fast path — resume the SSO flow with its cookies + the
   // challenge token stashed in its cache. ---
+  //
+  // Crucially, gate this on the session STILL carrying a pending `mfaToken`. A
+  // client keeps `clMFA` in its stored `loginData` after login (so a silent
+  // relogin can re-answer the factor), and re-sends it on every data call. Once
+  // the challenge is cleared the token is deleted from the cache, so a completed
+  // session no longer looks like a resume — otherwise every subsequent request
+  // would wrongly re-run the whole ClassLink SSO+2FA flow and hang on
+  // "Authenticating".
+  const existingCache = (() => {
+    if (!existingSession) return null;
+    try {
+      const parsed = typeof existingSession === 'string' ? JSON.parse(existingSession) : existingSession;
+      return parsed?.cache || null;
+    } catch { return null; }
+  })();
   const isMfaResume =
-    SSO_LOGIN_TYPES.has(loginType) && loginData.clMFA && existingSession &&
-    Object.keys(existingSession).length > 0;
+    SSO_LOGIN_TYPES.has(loginType) && loginData.clMFA && existingCache?.mfaToken;
   if (isMfaResume) {
     const resumed = await performLogin(platform, loginType, loginData, progressTracker, existingSession);
     if (!resumed) return null;
@@ -135,17 +189,21 @@ async function authenticate(req, platform, progressTracker) {
   // --- Fast path: reuse a session the client sent back ---
   if (existingSession && Object.keys(existingSession).length > 0) {
     const base = restoreCookiesIntoSession(createSession(), existingSession);
-    const link = resolveLink(platform, loginData);
+    // SSO logins (ClassLink) carry no link in loginData — the portal link was
+    // discovered during the original login and stashed in the session cache. Fall
+    // back to it so a reused SSO session never has to re-run ClassLink just to
+    // relocate the district portal.
+    const link = resolveLink(platform, loginData) || base.cache?.link;
 
     if (base.isSessionFresh(5)) {
       if (link) return finish(base, link, loginData.username);
       // No link to fetch data with — fall through to a fresh login.
     } else if (link && platform.homeEndpoint !== undefined && platform.isSessionExpired) {
-      // Cheap revalidation probe; if still logged in, skip the full login.
+      // Cheap revalidation probe; if still logged in, skip the full login
+      // (finish() re-stamps the validation time).
       try {
         const probe = await base.get(link + platform.homeEndpoint);
         if (!platform.isSessionExpired(probe.data)) {
-          base.setLastValidationTime(Date.now());
           return finish(base, link, loginData.username);
         }
       } catch { /* fall through to a fresh login */ }
