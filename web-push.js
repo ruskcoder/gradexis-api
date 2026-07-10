@@ -149,6 +149,16 @@ async function sendPushToAllDevices() {
     .map(async ({ subscription, platform }) => {
     const dedupeKey = dedupeKeyFor(subscription);
 
+    // web-push requires a real `{ endpoint, keys }` subscription. Some legacy
+    // rows (e.g. platform: 'android') hold a bare FCM token instead — there's
+    // no FCM-sending code path in this service, so those can never succeed.
+    // Prune them here rather than retrying (and erroring) every interval forever.
+    if (!subscription?.endpoint) {
+      console.log(`Pruning unsendable ${platform} subscription (no endpoint)`);
+      await removeSubscription(dedupeKey);
+      return;
+    }
+
     // web / web-firebase (both go out via VAPID web-push)
     try {
       if (platform === 'web-firebase') {
